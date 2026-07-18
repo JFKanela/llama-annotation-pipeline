@@ -1,0 +1,4 @@
+name: llama_agat
+channels: [conda-forge, bioconda]
+dependencies:
+  - agat

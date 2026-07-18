@@ -1,0 +1,6 @@
+name: llama_liftoff
+channels: [conda-forge, bioconda]
+dependencies:
+  - python=3.10
+  - liftoff=1.6.3
+  - minimap2=2.24

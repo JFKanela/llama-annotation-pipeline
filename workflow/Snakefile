@@ -1,0 +1,268 @@
+# =====================================================================
+# Pipeline · Anotacion de proteoma de Lama glama por dos metodos
+#   Rama A: Liftoff  (transferencia DNA-DNA)   env: envs/liftoff.yaml
+#   Rama B: miniprot (proteina-DNA)            env: envs/miniprot.yaml
+# QC comparativo: BUSCO + AGAT + gffcompare
+#
+# Ejecucion:  snakemake --use-conda --cores 8
+# Plan seco:  snakemake -n
+# =====================================================================
+import os
+configfile: "config.yaml"
+
+TARGET_ACC    = config["target_accession"]
+REF_ACC       = config["reference_accession"]
+LINEAGE       = config["busco_lineage"]
+LINEAGE2      = config.get("busco_lineage_secondary", "")
+THREADS       = int(config["threads"])
+BASELINE      = config.get("baseline_proteome", "")
+POLISH        = config.get("liftoff_polish", True)
+COPIES        = config.get("liftoff_copies", True)
+FLANK         = config.get("liftoff_flank", 0.0)
+MINIPROT_OUTN = int(config.get("miniprot_outn", 1))
+LONGEST       = config.get("keep_longest_isoform", True)
+OFFLINE       = config.get("busco_offline", False)
+
+# Anotacion de referencia y proteoma de referencia efectivos
+REF_GFF_EFF  = "resources/reference/annotation_primary.gff3" if LONGEST else "resources/reference/annotation.gff3"
+REF_PROT_EFF = "resources/reference/protein_primary.faa"     if LONGEST else "resources/reference/protein.faa"
+
+# Proteomas a evaluar con BUSCO
+PROTEOMES = {
+    "liftoff":    "results/proteomes/llama_liftoff.faa",
+    "miniprot":   "results/proteomes/llama_miniprot.faa",
+    "alpaca_ref": REF_PROT_EFF,
+}
+if BASELINE:
+    PROTEOMES["chaku_v1"] = BASELINE
+
+BUSCO_OUT = expand("results/busco/{name}/short_summary.txt", name=PROTEOMES.keys())
+if LINEAGE2:
+    BUSCO_OUT += expand("results/busco_secondary/{name}/short_summary.txt", name=PROTEOMES.keys())
+
+BUSCO_OFFLINE = "--offline --download_path busco_downloads" if OFFLINE else ""
+
+rule all:
+    input:
+        "results/report/comparison_report.md",
+        "results/report/comparison_table.tsv",
+        "results/proteomes/llama_liftoff.faa",
+        "results/proteomes/llama_miniprot.faa",
+        BUSCO_OUT,
+
+# ------------------------------------------------------------------ #
+# 1 · Adquisicion de datos (NCBI datasets)                           #
+# ------------------------------------------------------------------ #
+rule download_target:
+    output: "resources/target/genome.fasta"
+    conda: "envs/datasets.yaml"
+    params: acc=TARGET_ACC
+    shell:
+        r"""
+        mkdir -p resources/target && cd resources/target
+        datasets download genome accession {params.acc} --include genome --filename dl.zip
+        unzip -o dl.zip -d dl
+        find dl -name "*_genomic.fna" -exec cp {{}} genome.fasta \;
+        rm -rf dl dl.zip
+        test -s genome.fasta
+        """
+
+rule download_reference:
+    output:
+        fasta="resources/reference/genome.fasta",
+        gff="resources/reference/annotation.gff3",
+        prot="resources/reference/protein.faa",
+    conda: "envs/datasets.yaml"
+    params: acc=REF_ACC
+    shell:
+        r"""
+        mkdir -p resources/reference && cd resources/reference
+        datasets download genome accession {params.acc} --include genome,gff3,protein --filename dl.zip
+        unzip -o dl.zip -d dl
+        find dl -name "*_genomic.fna" -exec cp {{}} genome.fasta \;
+        find dl -name "genomic.gff"   -exec cp {{}} annotation.gff3 \;
+        find dl -name "protein.faa"   -exec cp {{}} protein.faa \;
+        rm -rf dl dl.zip
+        test -s genome.fasta && test -s annotation.gff3 && test -s protein.faa
+        """
+
+# ------------------------------------------------------------------ #
+# 2 · Referencia reducida a transcrito primario (isoforma mas larga) #
+#     Unifica el set de genes para que ambas ramas sean comparables  #
+# ------------------------------------------------------------------ #
+rule reference_primary_gff:
+    input: gff="resources/reference/annotation.gff3"
+    output: "resources/reference/annotation_primary.gff3"
+    conda: "envs/agat.yaml"
+    shell:
+        r"""
+        agat_sp_keep_longest_isoform.pl --gff {input.gff} -o {output}
+        """
+
+rule reference_primary_proteins:
+    input:
+        gff="resources/reference/annotation_primary.gff3",
+        fasta="resources/reference/genome.fasta",
+    output: "resources/reference/protein_primary.faa"
+    conda: "envs/gfftools.yaml"
+    shell:
+        r"""
+        gffread -y {output} -g {input.fasta} {input.gff}
+        """
+
+# ------------------------------------------------------------------ #
+# 3 · RAMA A · Liftoff (DNA-DNA)                                      #
+# ------------------------------------------------------------------ #
+rule liftoff:
+    input:
+        target="resources/target/genome.fasta",
+        ref="resources/reference/genome.fasta",
+        gff=REF_GFF_EFF,
+    output:
+        gff="results/liftoff/llama_liftoff.gff3",
+        unmapped="results/liftoff/unmapped.txt",
+    conda: "envs/liftoff.yaml"
+    threads: THREADS
+    params:
+        polish=("-polish" if POLISH else ""),
+        copies=("-copies" if COPIES else ""),
+        flank=FLANK,
+    shell:
+        r"""
+        mkdir -p results/liftoff
+        liftoff -g {input.gff} -o results/liftoff/raw.gff3 -u {output.unmapped} \
+                -dir results/liftoff/tmp -p {threads} -flank {params.flank} \
+                {params.polish} {params.copies} {input.target} {input.ref}
+        touch {output.unmapped}
+        # -polish escribe raw.gff3_polished; usar el pulido si existe
+        if [ -s results/liftoff/raw.gff3_polished ]; then
+            cp results/liftoff/raw.gff3_polished {output.gff}
+        else
+            cp results/liftoff/raw.gff3 {output.gff}
+        fi
+        """
+
+rule proteome_liftoff:
+    input:
+        gff="results/liftoff/llama_liftoff.gff3",
+        target="resources/target/genome.fasta",
+    output: "results/proteomes/llama_liftoff.faa"
+    conda: "envs/gfftools.yaml"
+    shell:
+        r"""
+        mkdir -p results/proteomes
+        gffread -y {output} -g {input.target} {input.gff}
+        """
+
+# ------------------------------------------------------------------ #
+# 4 · RAMA B · miniprot (proteina-DNA)                               #
+# ------------------------------------------------------------------ #
+rule miniprot:
+    input:
+        target="resources/target/genome.fasta",
+        prot=REF_PROT_EFF,
+    output: "results/miniprot/llama_miniprot.gff3"
+    conda: "envs/miniprot.yaml"
+    threads: THREADS
+    params: outn=MINIPROT_OUTN
+    shell:
+        r"""
+        mkdir -p results/miniprot
+        miniprot -t {threads} --outn={params.outn} --gff {input.target} {input.prot} \
+                 > results/miniprot/raw.gff3
+        # FIX validado: eliminar lineas ##PAF (tabuladores rompen gffread/gffcompare)
+        grep -v "^##PAF" results/miniprot/raw.gff3 > {output}
+        """
+
+rule proteome_miniprot:
+    input:
+        gff="results/miniprot/llama_miniprot.gff3",
+        target="resources/target/genome.fasta",
+    output: "results/proteomes/llama_miniprot.faa"
+    conda: "envs/gfftools.yaml"
+    shell:
+        r"""
+        mkdir -p results/proteomes
+        gffread -y {output} -g {input.target} {input.gff}
+        """
+
+# ------------------------------------------------------------------ #
+# 5 · QC · BUSCO (modo proteina) sobre cada proteoma                 #
+# ------------------------------------------------------------------ #
+rule busco:
+    input: lambda wc: PROTEOMES[wc.name]
+    output: "results/busco/{name}/short_summary.txt"
+    conda: "envs/busco.yaml"
+    threads: THREADS
+    params: lineage=LINEAGE, offline=BUSCO_OFFLINE
+    shell:
+        r"""
+        busco -i {input} -m proteins -l {params.lineage} -c {threads} \
+              -o {wildcards.name} --out_path results/busco -f {params.offline}
+        cp results/busco/{wildcards.name}/short_summary.specific.{params.lineage}.{wildcards.name}.txt {output}
+        """
+
+rule busco_secondary:
+    input: lambda wc: PROTEOMES[wc.name]
+    output: "results/busco_secondary/{name}/short_summary.txt"
+    conda: "envs/busco.yaml"
+    threads: THREADS
+    params: lineage=LINEAGE2, offline=BUSCO_OFFLINE
+    shell:
+        r"""
+        busco -i {input} -m proteins -l {params.lineage} -c {threads} \
+              -o {wildcards.name} --out_path results/busco_secondary -f {params.offline}
+        cp results/busco_secondary/{wildcards.name}/short_summary.specific.{params.lineage}.{wildcards.name}.txt {output}
+        """
+
+# ------------------------------------------------------------------ #
+# 6 · Estadisticas AGAT de cada anotacion                            #
+# ------------------------------------------------------------------ #
+rule agat_stats:
+    input: "results/{method}/llama_{method}.gff3"
+    output: "results/agat/{method}.stats.txt"
+    conda: "envs/agat.yaml"
+    wildcard_constraints: method="liftoff|miniprot"
+    shell:
+        r"""
+        mkdir -p results/agat
+        agat_sp_statistics.pl --gff {input} -o {output}
+        """
+
+# ------------------------------------------------------------------ #
+# 7 · Concordancia A vs B (misma diana)                              #
+# ------------------------------------------------------------------ #
+rule gffcompare:
+    input:
+        a="results/liftoff/llama_liftoff.gff3",
+        b="results/miniprot/llama_miniprot.gff3",
+    output: "results/gffcompare/cmp.stats"
+    conda: "envs/gfftools.yaml"
+    shell:
+        r"""
+        mkdir -p results/gffcompare
+        gffcompare -r {input.a} -o results/gffcompare/cmp {input.b}
+        """
+
+# ------------------------------------------------------------------ #
+# 8 · Informe comparativo                                            #
+# ------------------------------------------------------------------ #
+rule report:
+    input:
+        busco=BUSCO_OUT,
+        agat=expand("results/agat/{method}.stats.txt", method=["liftoff", "miniprot"]),
+        gffcmp="results/gffcompare/cmp.stats",
+        unmapped="results/liftoff/unmapped.txt",
+    output:
+        md="results/report/comparison_report.md",
+        tsv="results/report/comparison_table.tsv",
+    shell:
+        r"""
+        mkdir -p results/report
+        python scripts/build_report.py \
+            --busco-dir results/busco \
+            --agat-dir results/agat \
+            --gffcompare results/gffcompare/cmp.stats \
+            --unmapped results/liftoff/unmapped.txt \
+            --out-md {output.md} --out-tsv {output.tsv}
+        """

@@ -1,0 +1,4 @@
+name: llama_busco
+channels: [conda-forge, bioconda]
+dependencies:
+  - busco=6.1.0

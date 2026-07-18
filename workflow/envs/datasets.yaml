@@ -1,0 +1,5 @@
+name: llama_datasets
+channels: [conda-forge, bioconda]
+dependencies:
+  - ncbi-datasets-cli
+  - unzip

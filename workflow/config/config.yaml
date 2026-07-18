@@ -1,0 +1,36 @@
+# =====================================================================
+# Configuracion · Anotacion de proteoma de Lama glama (eje metodo)
+# Dos metodos sobre el MISMO genoma diana, misma referencia:
+#   Rama A: Liftoff  (transferencia basada en DNA)
+#   Rama B: miniprot (evidencia proteica)
+# =====================================================================
+
+# --- Genomas (INSDC / RefSeq) --------------------------------------
+# Diana: Lama glama, ensamblado cromosomico DNA Zoo (Hi-C)
+target_accession: "GCA_028534125.1"
+# Referencia: Vicugna pacos, RefSeq (anotacion RS_2025_04, abril 2025)
+reference_accession: "GCF_048564905.1"
+
+# --- Baseline (opcional) -------------------------------------------
+# Tu proteoma viejo de chaku (GCA_013239585.1). Deja "" para omitirlo.
+# Colocalo en resources/ y pon aqui su nombre.
+baseline_proteome: "resources/Lama_glama_proteome_v1.fasta"
+
+# --- QC ------------------------------------------------------------
+busco_lineage: "artiodactyla_odb12"
+busco_lineage_secondary: ""                 # p.ej. "cetartiodactyla_odb10" para el puente al numero publicado de alpaca; "" para omitir
+busco_offline: false                        # true si ya descargaste el linaje a busco_downloads/
+
+# --- Recursos ------------------------------------------------------
+threads: 8
+
+# --- Liftoff (Rama A) ----------------------------------------------
+liftoff_polish: true        # -polish: corrige indels/frameshifts. Recomendado.
+liftoff_copies: true        # -copies: busca copias extra de genes
+liftoff_flank: 0.0          # -flank: fraccion de secuencia flanqueante a alinear
+
+# --- miniprot (Rama B) ---------------------------------------------
+miniprot_outn: 1            # alineamientos por proteina en el proteoma final (1 = solo el mejor)
+
+# --- Proteomas -----------------------------------------------------
+keep_longest_isoform: true  # reduce a 1 proteina por gen antes de BUSCO (metrica de duplicacion interpretable)
