@@ -1,0 +1,63 @@
+# =====================================================================
+# Data & results — NEVER commit sequence/annotation data to this repo
+# =====================================================================
+
+# Sequence / alignment / annotation formats
+*.fa
+*.fna
+*.faa
+*.fasta
+*.fa.gz
+*.fna.gz
+*.faa.gz
+*.fasta.gz
+*.gff
+*.gff3
+*.gtf
+*.bed
+*.bam
+*.sam
+*.cram
+*.paf
+*.vcf
+*.vcf.gz
+*.bcf
+
+# Indexes / binary genomics
+*.fai
+*.bai
+*.csi
+*.2bit
+*.h5
+*.hdf5
+
+# Archives
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.gz
+*.bz2
+
+# Pipeline working directories
+results/
+resources/
+data/
+logs/
+.snakemake/
+busco_downloads/
+Helixer/
+
+# Conda / Python
+.conda/
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

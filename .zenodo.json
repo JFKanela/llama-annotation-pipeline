@@ -1,0 +1,25 @@
+{
+  "title": "llama-annotation-pipeline: Reproducible Snakemake workflow for homology-based and ab initio annotation of the Lama glama genome",
+  "description": "A Snakemake workflow that annotates a Lama glama genome assembly by DNA-based lift-over (Liftoff) and protein-to-genome alignment (miniprot) from a Vicugna pacos reference, and benchmarks the resulting proteomes with BUSCO, AGAT and gffcompare.",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "mit",
+  "version": "0.1.0",
+  "creators": [
+    {
+      "name": "Priego, Juan F.",
+      "orcid": "0009-0004-2103-6835",
+      "affiliation": "Universidad de Castilla-La Mancha (UCLM)"
+    }
+  ],
+  "keywords": [
+    "genome annotation",
+    "Lama glama",
+    "Vicugna pacos",
+    "Snakemake",
+    "Liftoff",
+    "miniprot",
+    "BUSCO",
+    "comparative genomics"
+  ]
+}
