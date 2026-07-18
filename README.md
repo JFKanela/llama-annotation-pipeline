@@ -56,7 +56,8 @@ evaluated side by side.
 │       ├── busco.yaml         # BUSCO
 │       └── gfftools.yaml      # gffread + gffcompare
 ├── scripts/
-│   └── fix_report_4brazos.py  # report post-processing helper
+│   ├── build_report.py        # builds the comparative report (called by the `report` rule)
+│   └── fix_report_4brazos.py  # standalone helper: recompute the comparison table
 ├── docs/
 ├── CITATION.cff
 ├── .zenodo.json
