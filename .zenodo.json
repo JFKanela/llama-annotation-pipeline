@@ -1,13 +1,13 @@
 {
-  "title": "llama-annotation-pipeline: Reproducible Snakemake workflow for homology-based and ab initio annotation of the Lama glama genome",
-  "description": "A Snakemake workflow that annotates a Lama glama genome assembly by DNA-based lift-over (Liftoff) and protein-to-genome alignment (miniprot) from a Vicugna pacos reference, and benchmarks the resulting proteomes with BUSCO, AGAT and gffcompare.",
+  "title": "llama-annotation-pipeline: Snakemake workflow and documented commands for homology-based and ab initio annotation of the Lama glama genome",
+  "description": "Workflow, environment definitions and helper scripts used to annotate the protein-coding gene complement of a Lama glama genome assembly (GCA_028534125.1) by four strategies, and to benchmark the resulting proteomes. Three homology strategies project the Vicugna pacos reference annotation (GCF_048564905.1): DNA-to-DNA lift-over (Liftoff), protein-to-genome alignment (miniprot) and hybrid reconciliation (LiftOn). The fourth strategy is reference-independent ab initio prediction (Helixer). Proteomes are evaluated with BUSCO, with structural statistics from AGAT and concordance from gffcompare. The Snakemake workflow automates data acquisition, the Liftoff and miniprot branches and their quality control; the LiftOn and Helixer branches were run manually and on external GPU infrastructure respectively, with the exact commands documented in REPRODUCIBILITY.md. No sequence or annotation data are tracked in this repository.",
   "upload_type": "software",
   "access_right": "open",
   "license": "mit",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "creators": [
     {
-      "name": "Priego, Juan F.",
+      "name": "Priego Cubero, Juan Francisco",
       "orcid": "0009-0004-2103-6835",
       "affiliation": "Universidad de Castilla-La Mancha (UCLM)"
     }
@@ -16,12 +16,14 @@
     "genome annotation",
     "Lama glama",
     "Vicugna pacos",
+    "Camelidae",
     "Snakemake",
     "Liftoff",
     "miniprot",
     "LiftOn",
     "Helixer",
     "BUSCO",
+    "liftover",
     "comparative genomics"
   ]
 }

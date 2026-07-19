@@ -35,6 +35,42 @@ exact commands to reproduce them are documented in
 `results/busco/`, so all four appear in the final table regardless of how they
 were produced.
 
+### Reference asymmetry between homology branches (important)
+
+The three homology branches did not start from the same reference annotation,
+and this must be taken into account when comparing them.
+
+With `keep_longest_isoform: true` (the setting used here), the workflow reduces
+the *Vicugna pacos* reference annotation to one transcript per gene with AGAT,
+and it is that reduced annotation (`annotation_primary.gff3`) and the
+corresponding reduced proteome (`protein_primary.faa`) that feed the **Liftoff**
+and **miniprot** branches.
+
+**LiftOn**, by contrast, requires the native NCBI GFF3 (`annotation_ncbi.gff`,
+option `-ad RefSeq`), because an AGAT-processed annotation yields an invalid
+proteome (see `REPRODUCIBILITY.md`, section 3.4). LiftOn therefore built its
+reference dictionary from the full multi-isoform annotation: 86,028 transcripts
+and 56,808 proteins, of which 349 truncated. It consumed the Liftoff and
+miniprot outputs only as evidence (`-L`, `-M`).
+
+Consequences for anyone reusing or extending this work:
+
+- LiftOn had access to a richer reference than the other two homology branches.
+  Any direct comparison of completeness between the three must state this.
+- A small number of identifier lookups failed for this reason: 31 loci out of
+  roughly 33,300 processed, 29 of them carrying AGAT-generated identifiers
+  (`agat-gene-N`) absent from the native NCBI database. The effect on the
+  resulting proteome is marginal, but it is the visible trace of the asymmetry.
+- To remove the asymmetry, run all three homology branches against the same
+  reference annotation. This was not done for the results reported here.
+
+A second, independent asymmetry affects the *ab initio* branch: **Helixer** was
+run on scaffolds of at least 10 kb (3,640 scaffolds, 0.34 % of the total,
+holding 1,915,763,599 bp or 81.46 % of the assembled sequence), whereas the
+three homology branches were run on the complete assembly. Completeness figures
+are therefore not directly comparable between Helixer and the homology
+branches.
+
 ### Genomes (configurable in `workflow/config/config.yaml`)
 
 | Role      | Species          | Accession           |
@@ -70,7 +106,6 @@ were produced.
 │   ├── build_report.py        # builds the comparative report (called by the `report` rule)
 │   ├── run_lifton.sh          # LiftOn branch wrapper (manual; see REPRODUCIBILITY.md sec. 3)
 │   └── run_helixer.py         # Helixer ab initio runner (external GPU; see REPRODUCIBILITY.md sec. 4)
-├── docs/
 ├── REPRODUCIBILITY.md         # exact commands: automated branches + manual LiftOn / Helixer
 ├── CITATION.cff
 ├── .zenodo.json
@@ -80,7 +115,9 @@ were produced.
 
 ## Requirements
 
-- [Snakemake](https://snakemake.readthedocs.io/) (≥ 7)
+- [Snakemake](https://snakemake.readthedocs.io/) 9.23.1 (the version used to
+  produce the results reported in the accompanying manuscript; later versions
+  are likely to work but have not been tested)
 - [conda](https://docs.conda.io/) / mamba — per-rule environments are resolved
   automatically with `--use-conda`
 - Network access for the data-acquisition rules (NCBI `datasets`)

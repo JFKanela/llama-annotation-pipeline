@@ -1,36 +1,55 @@
 # =====================================================================
-# Configuracion · Anotacion de proteoma de Lama glama (eje metodo)
-# Dos metodos sobre el MISMO genoma diana, misma referencia:
-#   Rama A: Liftoff  (transferencia basada en DNA)
-#   Rama B: miniprot (evidencia proteica)
+# Configuration - Lama glama proteome annotation
+#
+# This file configures the AUTOMATED part of the project only:
+#   Liftoff  (DNA-to-DNA lift-over)
+#   miniprot (protein-to-genome alignment)
+#   plus data acquisition and BUSCO / AGAT / gffcompare quality control.
+#
+# The LiftOn (hybrid homology) and Helixer (ab initio) branches are NOT
+# configured here: they were run manually and on external GPU infrastructure
+# respectively. See REPRODUCIBILITY.md, sections 3 and 4.
 # =====================================================================
 
-# --- Genomas (INSDC / RefSeq) --------------------------------------
-# Diana: Lama glama, ensamblado cromosomico DNA Zoo (Hi-C)
+# --- Genomes (INSDC / RefSeq) --------------------------------------
+# Target: Lama glama, chromosome-level DNA Zoo assembly (Hi-C)
 target_accession: "GCA_028534125.1"
-# Referencia: Vicugna pacos, RefSeq (anotacion RS_2025_04, abril 2025)
+# Reference: Vicugna pacos, RefSeq (annotation RS_2025_04, April 2025)
 reference_accession: "GCF_048564905.1"
 
-# --- Baseline (opcional) -------------------------------------------
-# Tu proteoma viejo de chaku (GCA_013239585.1). Deja "" para omitirlo.
-# Colocalo en resources/ y pon aqui su nombre.
+# --- Baseline (optional) -------------------------------------------
+# Previous chaku proteome (GCA_013239585.1). Leave "" to omit it.
+# Place it under resources/ and write its name here.
 baseline_proteome: "resources/Lama_glama_proteome_v1.fasta"
 
 # --- QC ------------------------------------------------------------
 busco_lineage: "artiodactyla_odb12"
-busco_lineage_secondary: ""                 # p.ej. "cetartiodactyla_odb10" para el puente al numero publicado de alpaca; "" para omitir
-busco_offline: false                        # true si ya descargaste el linaje a busco_downloads/
+# Secondary lineage, e.g. "cetartiodactyla_odb10", to bridge to the published
+# alpaca figure; "" to omit it.
+# Note: "cetartiodactyla_odb12" does NOT exist in OrthoDB v12, because the clade
+# was renamed to Artiodactyla.
+busco_lineage_secondary: ""
+busco_offline: false                        # true if the lineage was already downloaded into busco_downloads/
 
-# --- Recursos ------------------------------------------------------
+# --- Resources -----------------------------------------------------
 threads: 8
 
-# --- Liftoff (Rama A) ----------------------------------------------
-liftoff_polish: true        # -polish: corrige indels/frameshifts. Recomendado.
-liftoff_copies: true        # -copies: busca copias extra de genes
-liftoff_flank: 0.0          # -flank: fraccion de secuencia flanqueante a alinear
+# --- Liftoff (DNA-to-DNA branch) -----------------------------------
+liftoff_polish: true        # -polish: corrects indels/frameshifts. Recommended.
+liftoff_copies: true        # -copies: searches for extra gene copies
+liftoff_flank: 0.0          # -flank: fraction of flanking sequence to align
 
-# --- miniprot (Rama B) ---------------------------------------------
-miniprot_outn: 1            # alineamientos por proteina en el proteoma final (1 = solo el mejor)
+# --- miniprot (protein-to-genome branch) ---------------------------
+miniprot_outn: 1            # alignments per protein in the final proteome (1 = best only)
 
-# --- Proteomas -----------------------------------------------------
-keep_longest_isoform: true  # reduce a 1 proteina por gen antes de BUSCO (metrica de duplicacion interpretable)
+# --- Proteomes -----------------------------------------------------
+# Reduces the reference annotation to one transcript per gene (AGAT) before it
+# is handed to Liftoff and miniprot, which makes the BUSCO duplication metric
+# interpretable.
+#
+# IMPORTANT: this setting does NOT affect the LiftOn branch, which requires the
+# native NCBI GFF3 and therefore starts from the full multi-isoform reference.
+# The three homology branches consequently do not share the same reference
+# annotation. See the "Reference asymmetry" section of README.md before
+# comparing their completeness figures.
+keep_longest_isoform: true

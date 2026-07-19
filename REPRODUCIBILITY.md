@@ -48,6 +48,42 @@ configured on the development system).
 
 ---
 
+## Reference asymmetry between homology branches (important)
+
+The three homology branches did not start from the same reference annotation.
+This is a property of the results reported here, not an incident, and it must be
+stated whenever their completeness figures are compared.
+
+`keep_longest_isoform: true` (the setting used) reduces the *Vicugna pacos*
+reference to one transcript per gene with AGAT. It is that reduced annotation
+(`annotation_primary.gff3`) and its reduced proteome (`protein_primary.faa`)
+that feed **Liftoff** and **miniprot**.
+
+**LiftOn** cannot use it: it requires the native NCBI GFF3 (`-ad RefSeq`),
+because an AGAT-processed annotation yields an invalid proteome (section 3.4).
+LiftOn therefore built its reference dictionary from the full multi-isoform
+annotation: **86,028 transcripts and 56,808 proteins, of which 349 truncated**.
+It consumed the Liftoff and miniprot outputs only as evidence (`-L`, `-M`).
+
+Visible trace of the asymmetry in the log: **31 loci out of roughly 33,300
+processed** failed identifier lookup, **29 of them carrying AGAT-generated
+identifiers** (`agat-gene-N`) absent from the native NCBI database. The effect on
+the resulting proteome is marginal.
+
+Consequences:
+
+- LiftOn had access to a richer reference than the other two homology branches.
+- To remove the asymmetry, all three homology branches would have to be run
+  against the same reference annotation. **This was not done for the results
+  reported here.**
+
+A second, independent asymmetry affects the *ab initio* branch: Helixer was run
+on scaffolds of at least 10 kb, whereas the homology branches were run on the
+complete assembly (see section 4.2 for the exact figures). Completeness is
+therefore not directly comparable between Helixer and the homology branches.
+
+---
+
 ## 3. LiftOn branch (manual execution)
 
 The steps below (sections 3.2 and 3.3, plus the proteome extraction of section 5)
@@ -115,10 +151,20 @@ Note that the target genome precedes the reference on the command line.
 
 A first run used the annotation reduced to the primary isoform with AGAT as the
 reference. LiftOn generated 33,045 gene models with apparently correct
-coordinates, but only 2,533 translatable proteins, together with 575,167
-validation warnings for the input GFF. The problem was fully resolved by using
-the native NCBI GFF. It is documented here because the failure is silent: the
-resulting GFF looks correct, and only the protein count reveals the problem.
+coordinates, but only **2,533 translatable proteins**. The problem was fully
+resolved by using the native NCBI GFF, which yielded **20,233 proteins**.
+
+**The distinguishing criterion is the result, not the number of validation
+warnings.** It is tempting to read the warning count as the symptom, and it is
+wrong: the *valid* run logged **1,578,333** input-GFF validation warnings,
+almost three times more than the failed one. Those warnings are duplicate CDS
+identifiers, a normal artifact of RefSeq GFF3 files, which LiftOn resolves with a
+unique-identifier transformation (`create_unique`). A high warning count is
+therefore expected and diagnoses nothing.
+
+This is documented because the failure is silent: the resulting GFF looks
+correct, and only the translatable-protein count reveals the problem. Check the
+protein count of the resulting `.faa`, not the log verbosity.
 
 ---
 
@@ -139,9 +185,21 @@ uv venv --python 3.11 /tmp/hxenv
 uv pip install --python /tmp/hxenv/bin/python helixerlite "tensorflow[and-cuda]"
 ```
 
-Model: `vertebrate_v0.3_m_0080.h5` (Zenodo), subsequence length 213,840. The
-`helixerlite` Python API is used (`fasta2hdf5`, `HybridModel`, `preds2gff3`)
-together with `gfftk` for the final conversion.
+Model: `vertebrate_v0.3_m_0080.h5`, subsequence length 213,840. The model file is
+**not** tracked in this repository (`.gitignore` excludes `*.h5`); it is
+retrievable from its persistent identifier:
+
+- Record: *Helixer–ab initio Prediction of Primary Eukaryotic Gene Models
+  Combining Deep Learning and a Hidden Markov Model. Trained models.*, version
+  v0.3 (Denton, Holst & Bolger; published 19 March 2024).
+- DOI: **10.5281/zenodo.10836346** — <https://doi.org/10.5281/zenodo.10836346>
+- File used: `vertebrate_v0.3_m_0080.h5` (36.3 MB, md5
+  `acedf94d7c4f811e877da07844bc58f4`), downloaded from
+  <https://zenodo.org/records/10836346/files/vertebrate_v0.3_m_0080.h5?download=1>
+
+Note that the DOI above resolves to this specific version; a newer version of
+the record exists. The `helixerlite` Python API is used (`fasta2hdf5`,
+`HybridModel`, `preds2gff3`) together with `gfftk` for the final conversion.
 
 ### 4.2. Substrate and parameters
 

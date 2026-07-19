@@ -49,6 +49,14 @@ mkdir -p "$(dirname "$OUT_GFF")" "$(dirname "$OUT_FAA")" "$(dirname "$REF_GFF_NC
 # --- 1. Native NCBI reference GFF (section 3.2) ----------------------
 # LiftOn requires the NATIVE NCBI GFF; an AGAT-processed annotation yields an
 # invalid proteome (see REPRODUCIBILITY.md section 3.4).
+#
+# REFERENCE ASYMMETRY -- read before comparing branches. Because of this
+# requirement, LiftOn starts from the FULL multi-isoform reference (86,028
+# transcripts, 56,808 proteins), whereas Liftoff and miniprot are fed the
+# AGAT-reduced one-transcript-per-gene annotation produced by the workflow when
+# `keep_longest_isoform: true`. The three homology branches therefore do NOT
+# share the same reference annotation. See the "Reference asymmetry" sections of
+# README.md and REPRODUCIBILITY.md.
 if [ ! -s "$REF_GFF_NCBI" ]; then
     echo ">> Downloading native NCBI GFF for ${REF_ACC} ..."
     ACC_NODOT="${REF_ACC%.*}"                    # GCF_048564905
