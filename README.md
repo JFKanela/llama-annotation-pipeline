@@ -12,17 +12,28 @@ excluded via `.gitignore`.
 
 ## Overview
 
-The workflow annotates a target llama assembly by transferring / projecting a
-well-annotated reference and then compares two independent strategies on the
-**same** target genome:
+The project compares **four** protein-coding annotation strategies on the same
+*Lama glama* target assembly, benchmarked against the *Vicugna pacos* reference
+proteome (ceiling) and a previous llama proteome (baseline):
 
-- **Branch A — Liftoff** (`envs/liftoff.yaml`): DNA-to-DNA lift-over of the
+- **Liftoff** (`envs/liftoff.yaml`) — homology, DNA-to-DNA lift-over of the
   reference annotation, with optional `-polish` and `-copies`.
-- **Branch B — miniprot** (`envs/miniprot.yaml`): protein-to-genome alignment
-  of the reference proteome.
+- **miniprot** (`envs/miniprot.yaml`) — homology, protein-to-genome alignment of
+  the reference proteome.
+- **LiftOn** — hybrid homology, reconciling the Liftoff and miniprot models.
+- **Helixer** — *ab initio* deep-learning gene prediction.
 
-Both branches are reduced to a single protein per gene (longest isoform) and
-evaluated side by side.
+### Automation boundary (important)
+
+The Snakemake workflow automates the data acquisition, the **Liftoff** and
+**miniprot** branches, and their BUSCO / AGAT / gffcompare QC. **LiftOn** and
+**Helixer** were added later and are run **manually** (LiftOn) or on **external
+GPU infrastructure** (Helixer); they are *not* wired into the `Snakefile`. The
+exact commands to reproduce them are documented in
+[`REPRODUCIBILIDAD.md`](REPRODUCIBILIDAD.md). The comparative report
+(`scripts/build_report.py`) discovers whichever branches are present under
+`results/busco/`, so all four appear in the final table regardless of how they
+were produced.
 
 ### Genomes (configurable in `workflow/config/config.yaml`)
 
@@ -57,8 +68,10 @@ evaluated side by side.
 │       └── gfftools.yaml      # gffread + gffcompare
 ├── scripts/
 │   ├── build_report.py        # builds the comparative report (called by the `report` rule)
-│   └── fix_report_4brazos.py  # standalone helper: recompute the comparison table
+│   ├── run_helixer.py         # Helixer ab initio runner (external GPU; see REPRODUCIBILIDAD.md)
+│   └── fix_report_4brazos.py  # standalone helper (internal): recompute the comparison table
 ├── docs/
+├── REPRODUCIBILIDAD.md        # exact commands: automated branches + manual LiftOn / Helixer
 ├── CITATION.cff
 ├── .zenodo.json
 ├── LICENSE
