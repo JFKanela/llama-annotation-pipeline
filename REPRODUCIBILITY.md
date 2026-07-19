@@ -50,6 +50,10 @@ configured on the development system).
 
 ## 3. LiftOn branch (manual execution)
 
+The steps below (sections 3.2 and 3.3, plus the proteome extraction of section 5)
+are wrapped in `scripts/run_lifton.sh`. The environment setup in 3.1 is a
+one-time prerequisite and is not scripted.
+
 ### 3.1. Building the environment
 
 LiftOn 1.0.9 is not available on bioconda, only on PyPI, and its installation

@@ -68,7 +68,8 @@ were produced.
 │       └── gfftools.yaml      # gffread + gffcompare
 ├── scripts/
 │   ├── build_report.py        # builds the comparative report (called by the `report` rule)
-│   └── run_helixer.py         # Helixer ab initio runner (external GPU; see REPRODUCIBILITY.md)
+│   ├── run_lifton.sh          # LiftOn branch wrapper (manual; see REPRODUCIBILITY.md sec. 3)
+│   └── run_helixer.py         # Helixer ab initio runner (external GPU; see REPRODUCIBILITY.md sec. 4)
 ├── docs/
 ├── REPRODUCIBILITY.md         # exact commands: automated branches + manual LiftOn / Helixer
 ├── CITATION.cff
