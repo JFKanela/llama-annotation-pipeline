@@ -84,11 +84,34 @@ Consequences for anyone reusing or extending this work:
 - To remove the asymmetry, run all three homology branches against the same
   reference annotation. This was not done for the results reported here.
 
-A second, independent asymmetry affects the *ab initio* branch: **Helixer** was
-run on scaffolds of at least 10 kb (3,640 scaffolds, 0.34 % of the total,
-holding 1,915,763,599 bp or 81.46 % of the assembled sequence), whereas the
-three homology branches were run on the complete assembly. Completeness figures
-are therefore not directly comparable between Helixer and the homology branches.
+A second, independent set of asymmetries affects the *ab initio* branch. They are
+described in full in the next section, which should be read before comparing
+Helixer with the homology branches.
+
+### Helixer run conditions (important)
+
+Three aspects of how the *ab initio* branch was run must be taken into account
+before comparing its completeness figures with those of the homology branches.
+
+**Substrate.** Helixer was run on scaffolds of at least 10 kb: 3,640 scaffolds,
+0.34 % of the total by count, holding 1,915,763,599 bp or 81.46 % of the
+assembled sequence. The three homology branches were run on the complete
+assembly.
+
+**No subsequence overlap.** Prediction was performed on 213,840 bp subsequences
+with no overlap between them. Overlapping prediction exists in Helixer to
+mitigate the loss of accuracy at subsequence boundaries; running without it
+leaves one such boundary every 213,840 bp across 1.92 Gb. The completeness
+reported here is therefore a lower bound on what Helixer can achieve on this
+assembly, not a representative measure of the tool's performance.
+
+**Model loaded by path.** The model was supplied with `--load-model-path` rather
+than selected with `--lineage`, so the lineage-based parameter defaults were not
+applied.
+
+These are properties of this particular run, not of the method. Users comparing
+the four annotation sets should read the Helixer figures as descriptive of the
+data released here rather than as a benchmark of *ab initio* prediction.
 
 ### Genomes (configurable in `workflow/config/config.yaml`)
 

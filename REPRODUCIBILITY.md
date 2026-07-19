@@ -48,39 +48,70 @@ configured on the development system).
 
 ### Exact tool versions
 
-Entries marked *to be confirmed* must be completed from the corresponding
-environment on the compute machine. They are deliberately left open rather than
-filled in by inference.
+Versions were read from the conda environment metadata on the compute machine
+after the fact, except where explicitly noted as reconstructed.
 
-| Tool | Version | Environment |
-|---|---|---|
-| Liftoff | 1.6.3 | `envs/liftoff.yaml` (pinned) and `lifton` |
-| minimap2 | 2.24 | `envs/liftoff.yaml` (pinned) and `lifton` |
-| miniprot (standalone branch) | 0.18-r281 | `envs/miniprot.yaml` (pins `miniprot=0.18`) |
-| miniprot (inside LiftOn) | 0.13-r248 | `lifton` |
-| LiftOn | 1.0.9 | `lifton` (pip) |
-| Snakemake | 9.23.1 | host |
-| BUSCO | 6.1.0 | `envs/busco.yaml` (pinned) |
-| gffread | 0.12.9 — to be confirmed, see note below | `envs/gfftools.yaml` pins `gffread=0.12.7` |
-| AGAT | to be confirmed | `envs/agat.yaml` (unpinned) |
-| gffcompare | to be confirmed | `envs/gfftools.yaml` (unpinned) |
-| helixerlite | to be confirmed | Kaggle, Tesla P100 |
+| Tool | Version | Build | Environment | Pinned at run time |
+|---|---|---|---|---|
+| Liftoff | 1.6.3 | pyhdfd78af_2 | `envs/liftoff.yaml`, `lifton` | yes |
+| minimap2 | 2.24 | h7132678_1 | `envs/liftoff.yaml`, `lifton` | yes |
+| miniprot (standalone branch) | 0.18 | h577a1d6_0 | `envs/miniprot.yaml` | yes |
+| miniprot (inside LiftOn) | 0.13-r248 | he4a0461_1 | `lifton` | no |
+| miniprot (BUSCO dependency) | 0.18 | h577a1d6_0 | `envs/busco.yaml` | n/a |
+| LiftOn | 1.0.9 | pypi | `lifton` | n/a |
+| gffread (Liftoff, miniprot proteomes) | 0.12.7 | h077b44d_6 | `envs/gfftools.yaml` | yes |
+| gffread (LiftOn, Helixer proteomes) | 0.12.9 | - | `smk` | no |
+| gffcompare | 0.12.10 | h9948957_0 | `envs/gfftools.yaml` | no |
+| AGAT | 1.7.0 | pl5321hdfd78af_0 | `envs/agat.yaml` | no |
+| BUSCO | 6.1.0 | pyhdfd78af_1 | `envs/busco.yaml` | yes |
+| Snakemake | 9.23.1 | - | host | n/a |
+| helixerlite | 25.5.27 | commit 04c8086, cp311 wheel | Kaggle (Tesla P100), isolated `uv` venv | no |
+| gfftk | 26.5.22 | - | same venv (helixerlite dependency) | no |
+| TensorFlow (`tensorflow[and-cuda]`) | 2.15.1 | - | same venv | no |
+| tensorflow-addons | 0.23.0 | - | resolved dependency | no |
+| CPython | 3.11.15 | - | `uv venv --python 3.11` | minor only |
 
-The `lifton` environment was created without pinning miniprot, so the solver
-installed the version compatible with LiftOn's dependencies (0.13-r248), whereas
-the standalone miniprot branch pins `miniprot=0.18` in `envs/miniprot.yaml` and
-resolves to 0.18-r281. LiftOn's internal miniprot-based rescue therefore used an
-older miniprot than the standalone branch. Liftoff (1.6.3) and minimap2 (2.24)
-are identical in both environments, so the discrepancy is limited to miniprot.
+Two gffread versions were used. The Liftoff and miniprot proteomes were
+extracted by the Snakemake workflow with gffread 0.12.7, pinned in
+`envs/gfftools.yaml`. The LiftOn and Helixer proteomes were extracted manually
+with gffread 0.12.9 from the working environment `smk`, the only gffread
+available outside the Snakemake-managed environments. The difference is
+patch-level; no equivalence test between the two versions was performed for this
+dataset.
 
-**Unresolved: gffread.** The version recorded during the audit was 0.12.9, but
-`envs/gfftools.yaml` pins `gffread=0.12.7`. These cannot both describe the same
-environment, so one of the two must be corrected: either the audited binary came
-from an environment other than `llama_gfftools`, or the pin was changed after the
-run. This must be settled on the compute machine before the `v1.0.0` tag.
+The same pattern applies to miniprot: version 0.18 is pinned in
+`envs/miniprot.yaml` for the standalone branch, whereas the manually created
+`lifton` environment was built without pinning it, so the solver installed
+0.13-r248 alongside LiftOn's dependencies. LiftOn's internal miniprot-based
+rescue therefore used an older miniprot than the standalone branch. Liftoff
+(1.6.3) and minimap2 (2.24) are identical in both environments.
+
+At the time of execution, gffcompare and AGAT were not pinned in their
+environment files, and gffread in the working environment was installed without
+a version constraint. The versions listed in the table are those actually
+installed, read from the conda environment metadata after the fact.
+
+The version constraints for AGAT and gffcompare were added to their environment
+files after the analyses had been run, so that the pinned versions match those
+actually used. The results reported in the accompanying manuscript were produced
+with the versions listed in the table above, which the solver resolved at run
+time in the absence of a constraint. Adding these constraints changes the hash of
+the affected environments, so Snakemake will rebuild them on the next run; that
+is expected and does not invalidate anything already executed.
+
+**Determined versus reconstructed.** `helixerlite` was installed without a
+version constraint and its version is not recorded in the output GFF3. It is
+*determined* as 25.5.27: only three releases exist on PyPI and that one has been
+current since 27 May 2025, more than a year before the run. The same
+date-versioning argument determines `gfftk` 26.5.22. By contrast, **TensorFlow
+2.15.1, tensorflow-addons 0.23.0 and CPython 3.11.15 are a reconstruction**,
+obtained by re-running the same unconstrained installation command one day after
+the original run; they are not a record of what was installed. The model,
+`vertebrate_v0.3_m_0080`, is documented and is the determining factor for
+reproducibility: the code version without the model reproduces nothing, whereas
+the model largely determines the prediction.
 
 ---
-
 ## Reference asymmetry between homology branches (important)
 
 The three homology branches did not start from the same reference annotation.
@@ -234,6 +265,13 @@ specific hardware and a platform account. The resulting GFF3 is treated as a
 documented external input and is provided in the repository. The runner script
 is `scripts/run_helixer.py`.
 
+**Citation.** Helixer and HelixerPost are both packaged by `helixerlite` and are
+covered by the same reference: *Helixer: ab initio prediction of primary
+eukaryotic gene models combining deep learning and a hidden Markov model*,
+Nature Methods (2025), DOI
+[10.1038/s41592-025-02939-1](https://doi.org/10.1038/s41592-025-02939-1). Cite
+the published article, not the earlier preprint.
+
 ### 4.1. Environment
 
 ```bash
@@ -270,6 +308,47 @@ consecutive blocks of 300 Mb (`CHUNK_BP = 300_000_000`) due to the platform's
 session time limit (about 12 hours). Intermediate files were written to ample
 temporary storage and the partial GFF3s to a persistent working directory, so
 that the run was resumable.
+
+### Helixer run parameters
+
+Helixer was run through `helixerlite` on Kaggle (NVIDIA Tesla P100) inside an
+isolated virtual environment created with `uv`.
+
+| Parameter | Value |
+|---|---|
+| Input assembly | `GCA_028534125.1_Lama_glama_HiC_genomic.fna.gz` (NCBI FTP) |
+| Scaffold length filter | >= 10,000 bp |
+| Model | `vertebrate_v0.3_m_0080.h5` (DOI 10.5281/zenodo.10836346) |
+| Subsequence length | 213,840 bp |
+| Subsequence overlap | **none** |
+| Batch size | 16 |
+| CPUs | 4 |
+| Genome split | ~300 Mb blocks, whole scaffolds only |
+| `window_size` | 100 |
+| `edge_threshold` | 0.1 |
+| `peak_threshold` | 0.8 |
+| `min_coding_length` | 60 |
+| Final GFF3 normalisation | `gfftk` 26.5.22 (`gff2dict` / `dict2gff3`) |
+
+All four HelixerPost parameters were left at the helixerlite defaults
+(`window_size` 100, `edge_threshold` 0.1, `peak_threshold` 0.8,
+`min_coding_length` 60); no parameter tuning was performed. The two values that
+appear explicitly in the run script are identical to the defaults. These
+defaults were read from the signature of `preds2gff3` in the installed version
+(helixerlite 25.5.27), not from upstream Helixer documentation.
+
+The model was loaded by direct path (`--load-model-path`) rather than by
+lineage, so the lineage-based parameter defaults that Helixer applies when
+`--lineage` is used were not in effect.
+
+The genome was processed in seven consecutive blocks of approximately 300 Mb
+because of the session time limit of the external platform. Blocks were formed
+by accumulating **whole scaffolds**, so no scaffold was split across blocks and
+block boundaries introduce no edge artefact beyond the one already present at
+subsequence boundaries. The per-block GFF3 files were concatenated and the
+result verified: all seven blocks represented, no duplicate identifiers, and 42
+exon features with invalid coordinates discarded by gffread, none of them
+affecting a CDS.
 
 ### 4.3. Resuming across sessions
 
@@ -310,10 +389,14 @@ GFF3 conversion. No CDS was affected, so the proteome was not compromised:
 
 ## 5. Manual proteome extraction and quality control
 
-For the two non-automated branches, after obtaining the GFF3:
+For the two non-automated branches, after obtaining the GFF3.
+
+The `lifton` environment does **not** contain gffread, so `conda run -n lifton
+gffread ...` fails. Use the working environment `smk`, which holds the only
+gffread available outside the Snakemake-managed environments:
 
 ```bash
-conda activate smk
+conda activate smk    # gffread 0.12.9
 
 # LiftOn
 gffread -y results/proteomes/llama_lifton_v2.faa \

@@ -1,4 +1,6 @@
 name: llama_agat
 channels: [conda-forge, bioconda]
 dependencies:
-  - agat
+  # Version pinned a posteriori to match the version actually used; see
+  # REPRODUCIBILITY.md, "Exact tool versions".
+  - agat=1.7.0

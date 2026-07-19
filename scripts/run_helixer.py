@@ -1,4 +1,20 @@
 
+# =====================================================================
+# run_helixer.py - Helixer (ab initio) branch, external GPU execution
+#
+# Run on Kaggle (NVIDIA Tesla P100) inside an isolated `uv` virtual environment;
+# NOT automated in Snakemake. helixerlite 25.5.27, model
+# `vertebrate_v0.3_m_0080.h5` (DOI 10.5281/zenodo.10836346).
+#
+# IMPORTANT - read before comparing this branch with the homology branches:
+# this run used scaffolds >= 10 kb only, NO subsequence overlap, and loaded the
+# model by path rather than by lineage. Those choices make the reported
+# completeness a lower bound, not a benchmark of the method. See the
+# "Helixer run conditions (important)" section of README.md and the
+# "Helixer run parameters" section of REPRODUCIBILITY.md.
+#
+# Citation: Nature Methods (2025), DOI 10.1038/s41592-025-02939-1.
+# =====================================================================
 import os, sys, time, shutil
 os.chdir("/kaggle/working")
 import pyfastx
