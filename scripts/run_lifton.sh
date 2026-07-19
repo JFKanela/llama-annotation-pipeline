@@ -6,6 +6,14 @@
 # LiftOn is NOT wired into the Snakefile: it was added after the workflow and
 # reuses the Liftoff and miniprot annotations already produced by the pipeline.
 #
+# REFERENCE ASYMMETRY -- read this before comparing branches. LiftOn requires the
+# native NCBI GFF3, whereas Liftoff and miniprot are fed the AGAT-reduced
+# one-transcript-per-gene annotation produced by the workflow when
+# `keep_longest_isoform: true`. The three homology branches therefore do NOT share
+# the same reference annotation: they differ in isoform depth, not in gene
+# repertoire. See the "Reference asymmetry between homology branches" section of
+# README.md for the exact counts before comparing completeness figures.
+#
 # Prerequisites (see REPRODUCIBILITY.md section 3.1 for the full recipe):
 #   - a conda env named `lifton` with LiftOn 1.0.9 installed, and
 #   - a conda env named `smk` providing gffread (for the proteome step).
@@ -50,13 +58,9 @@ mkdir -p "$(dirname "$OUT_GFF")" "$(dirname "$OUT_FAA")" "$(dirname "$REF_GFF_NC
 # LiftOn requires the NATIVE NCBI GFF; an AGAT-processed annotation yields an
 # invalid proteome (see REPRODUCIBILITY.md section 3.4).
 #
-# REFERENCE ASYMMETRY -- read before comparing branches. Because of this
-# requirement, LiftOn starts from the FULL multi-isoform reference (86,028
-# transcripts, 56,808 proteins), whereas Liftoff and miniprot are fed the
-# AGAT-reduced one-transcript-per-gene annotation produced by the workflow when
-# `keep_longest_isoform: true`. The three homology branches therefore do NOT
-# share the same reference annotation. See the "Reference asymmetry" sections of
-# README.md and REPRODUCIBILITY.md.
+# This is also the origin of the reference asymmetry described in the header:
+# LiftOn starts from the full multi-isoform reference, while Liftoff and miniprot
+# are fed the AGAT-reduced one-transcript-per-gene annotation.
 if [ ! -s "$REF_GFF_NCBI" ]; then
     echo ">> Downloading native NCBI GFF for ${REF_ACC} ..."
     ACC_NODOT="${REF_ACC%.*}"                    # GCF_048564905

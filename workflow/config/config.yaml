@@ -8,7 +8,7 @@
 #
 # The LiftOn (hybrid homology) and Helixer (ab initio) branches are NOT
 # configured here: they were run manually and on external GPU infrastructure
-# respectively. See REPRODUCIBILITY.md, sections 3 and 4.
+# respectively. See REPRODUCIBILITY.md.
 # =====================================================================
 
 # --- Genomes (INSDC / RefSeq) --------------------------------------
@@ -45,7 +45,8 @@ miniprot_outn: 1            # alignments per protein in the final proteome (1 = 
 # --- Proteomes -----------------------------------------------------
 # Reduces the reference annotation to one transcript per gene (AGAT) before it
 # is handed to Liftoff and miniprot, which makes the BUSCO duplication metric
-# interpretable.
+# interpretable. It reduces 56,758 mRNA to 21,233 while keeping all 37,446 gene
+# models.
 #
 # IMPORTANT: this setting does NOT affect the LiftOn branch, which requires the
 # native NCBI GFF3 and therefore starts from the full multi-isoform reference.

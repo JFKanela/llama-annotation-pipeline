@@ -37,8 +37,8 @@ were produced.
 
 ### Reference asymmetry between homology branches (important)
 
-The three homology branches did not start from the same reference annotation,
-and this must be taken into account when comparing them.
+The three homology branches did not start from the same reference annotation.
+The difference is one of isoform depth, not of gene repertoire.
 
 With `keep_longest_isoform: true` (the setting used here), the workflow reduces
 the *Vicugna pacos* reference annotation to one transcript per gene with AGAT,
@@ -48,19 +48,39 @@ and **miniprot** branches.
 
 **LiftOn**, by contrast, requires the native NCBI GFF3 (`annotation_ncbi.gff`,
 option `-ad RefSeq`), because an AGAT-processed annotation yields an invalid
-proteome (see `REPRODUCIBILITY.md`, section 3.4). LiftOn therefore built its
-reference dictionary from the full multi-isoform annotation: 86,028 transcripts
-and 56,808 proteins, of which 349 truncated. It consumed the Liftoff and
+proteome (see `REPRODUCIBILITY.md`). LiftOn therefore built its reference
+dictionary from the full multi-isoform annotation. It consumed the Liftoff and
 miniprot outputs only as evidence (`-L`, `-M`).
+
+| Reference used by | gene | mRNA | proteins |
+|---|---|---|---|
+| LiftOn (`annotation_ncbi.gff` / `protein.faa`) | 37,446 | 56,758 | 56,808 |
+| Liftoff and miniprot (`annotation_primary.gff3` / `protein_primary.faa`) | 37,446 | 21,233 | 21,283 |
+
+Both references contain the **same 37,446 gene models**. They differ in isoform
+depth: 2.67 mRNA per protein-coding gene versus one. The AGAT reduction removed
+no gene. (In both files the protein count exceeds the mRNA count by 50, because
+32 `V_gene_segment` and 18 `C_gene_segment` features carry CDS without being
+`mRNA`; both are retained by the reduction.)
 
 Consequences for anyone reusing or extending this work:
 
-- LiftOn had access to a richer reference than the other two homology branches.
-  Any direct comparison of completeness between the three must state this.
-- A small number of identifier lookups failed for this reason: 31 loci out of
-  roughly 33,300 processed, 29 of them carrying AGAT-generated identifiers
-  (`agat-gene-N`) absent from the native NCBI database. The effect on the
-  resulting proteome is marginal, but it is the visible trace of the asymmetry.
+- LiftOn had more isoforms per locus available than the other two homology
+  branches. Any direct comparison of completeness between the three should say
+  so. The effect is bounded but not zero: on the reference proteome itself the
+  primary-isoform set already recovers 98.5 % of BUSCO groups, so additional
+  isoforms can add at most about 1.5 points there. That bound applies to the
+  reference, not to the transfer step, where additional isoforms also provide
+  additional opportunities for a clean mapping.
+- The reduction generated 28 new gene identifiers (`agat-gene-N`) for gene
+  features that AGAT had to recreate. All 28 failed lookup against the native
+  NCBI database during the LiftOn run, and no other gene identifier of that kind
+  failed: 28 out of 37,446 gene models (0.075 %). The log records 31 failure
+  events because one of those entries also appears as a duplicated copy
+  (suffix `_1`), and because two further failures involve native identifiers and
+  have a different, unrelated cause. The remaining AGAT-generated identifiers
+  (29,430 five-prime UTR, 22,526 three-prime UTR, 3,505 pseudogene) are not
+  queried against the reference database and caused no failure.
 - To remove the asymmetry, run all three homology branches against the same
   reference annotation. This was not done for the results reported here.
 
@@ -68,8 +88,7 @@ A second, independent asymmetry affects the *ab initio* branch: **Helixer** was
 run on scaffolds of at least 10 kb (3,640 scaffolds, 0.34 % of the total,
 holding 1,915,763,599 bp or 81.46 % of the assembled sequence), whereas the
 three homology branches were run on the complete assembly. Completeness figures
-are therefore not directly comparable between Helixer and the homology
-branches.
+are therefore not directly comparable between Helixer and the homology branches.
 
 ### Genomes (configurable in `workflow/config/config.yaml`)
 
