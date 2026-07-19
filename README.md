@@ -30,7 +30,7 @@ The Snakemake workflow automates the data acquisition, the **Liftoff** and
 **Helixer** were added later and are run **manually** (LiftOn) or on **external
 GPU infrastructure** (Helixer); they are *not* wired into the `Snakefile`. The
 exact commands to reproduce them are documented in
-[`REPRODUCIBILIDAD.md`](REPRODUCIBILIDAD.md). The comparative report
+[`REPRODUCIBILITY.md`](REPRODUCIBILITY.md). The comparative report
 (`scripts/build_report.py`) discovers whichever branches are present under
 `results/busco/`, so all four appear in the final table regardless of how they
 were produced.
@@ -68,10 +68,9 @@ were produced.
 │       └── gfftools.yaml      # gffread + gffcompare
 ├── scripts/
 │   ├── build_report.py        # builds the comparative report (called by the `report` rule)
-│   ├── run_helixer.py         # Helixer ab initio runner (external GPU; see REPRODUCIBILIDAD.md)
-│   └── fix_report_4brazos.py  # standalone helper (internal): recompute the comparison table
+│   └── run_helixer.py         # Helixer ab initio runner (external GPU; see REPRODUCIBILITY.md)
 ├── docs/
-├── REPRODUCIBILIDAD.md        # exact commands: automated branches + manual LiftOn / Helixer
+├── REPRODUCIBILITY.md         # exact commands: automated branches + manual LiftOn / Helixer
 ├── CITATION.cff
 ├── .zenodo.json
 ├── LICENSE
