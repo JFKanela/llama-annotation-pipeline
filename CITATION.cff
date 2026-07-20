@@ -22,7 +22,7 @@ authors:
     orcid: "https://orcid.org/0009-0004-2103-6835"
     affiliation: "Universidad de Castilla-La Mancha (UCLM)"
 version: "1.0.0"
-date-released: "AAAA-MM-DD"
+date-released: "2026-07-20"
 license: MIT
 repository-code: "https://github.com/JFKanela/llama-annotation-pipeline"
 keywords:
