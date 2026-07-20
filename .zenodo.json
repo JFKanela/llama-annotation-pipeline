@@ -5,6 +5,18 @@
   "access_right": "open",
   "license": "mit",
   "version": "1.0.0",
+  "related_identifiers": [
+    {
+      "identifier": "10.5281/zenodo.21445840",
+      "relation": "isSupplementTo",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.5281/zenodo.10836346",
+      "relation": "references",
+      "scheme": "doi"
+    }
+  ],
   "creators": [
     {
       "name": "Priego Cubero, Juan Francisco",

@@ -1,5 +1,7 @@
 # llama-annotation-pipeline
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21456816.svg)](https://doi.org/10.5281/zenodo.21456816)
+
 Reproducible Snakemake workflow for homology-based and *ab initio* annotation
 of the *Lama glama* genome.
 
@@ -9,6 +11,29 @@ scripts used to annotate the protein-coding gene complement of a *Lama glama*
 or annotation data are tracked in this repository** — all `.fasta`, `.gff3`,
 `.faa`, BUSCO downloads and pipeline outputs are produced locally and are
 excluded via `.gitignore`.
+
+## Data
+
+The annotation sets and proteomes produced with this workflow are deposited
+separately:
+
+**DOI: [10.5281/zenodo.21445840](https://doi.org/10.5281/zenodo.21445840)** (CC0-1.0)
+
+The deposit contains the four annotations (GFF3), the four derived proteomes
+(FASTA), and the quality-control output for six protein sets: the four produced
+here, the *Vicugna pacos* reference proteome as a ceiling, and a previous
+unpublished in-house annotation as a baseline.
+
+The files are under embargo until the associated manuscript is published; the
+record metadata, including the full description of contents and caveats, is
+publicly visible in the meantime.
+
+Note that code and data are deposited as **separate records with different
+licences**: MIT for this workflow, CC0-1.0 for the data. This is deliberate.
+
+Source assembly and reference annotation are not redistributed in either deposit.
+They are available from INSDC as GCA_028534125.1 and GCF_048564905.1
+respectively.
 
 ## Overview
 
@@ -185,15 +210,21 @@ BUSCO lineages or parameters.
 
 Raw and intermediate data (genomes, proteomes, annotations, BUSCO downloads,
 reports) are **not** included in this repository by design. They are regenerated
-by running the workflow, or are available from the sources cited in the
-accompanying manuscript.
+by running the workflow, or obtained from the deposit listed in the [Data](#data)
+section above and from INSDC.
 
 ## Citation
 
 If you use this workflow, please cite it via the metadata in
-[`CITATION.cff`](CITATION.cff). A Zenodo DOI will be minted from a tagged
-release once the repository is made public (see the manuscript for the
-version-of-record DOI).
+[`CITATION.cff`](CITATION.cff), or through its Zenodo DOI:
+
+- Concept DOI, always resolving to the latest version:
+  [10.5281/zenodo.21456816](https://doi.org/10.5281/zenodo.21456816)
+- Version 1.0.0:
+  [10.5281/zenodo.21456817](https://doi.org/10.5281/zenodo.21456817)
+
+Cite the version DOI when referring to the exact state of the code used for a
+given analysis, and the concept DOI otherwise.
 
 ## License
 
