@@ -65,11 +65,17 @@ after the fact, except where explicitly noted as reconstructed.
 | AGAT | 1.7.0 | pl5321hdfd78af_0 | `envs/agat.yaml` | no |
 | BUSCO | 6.1.0 | pyhdfd78af_1 | `envs/busco.yaml` | yes |
 | Snakemake | 9.23.1 | - | host | n/a |
-| helixerlite | 25.5.27 | commit 04c8086, cp311 wheel | Kaggle (Tesla P100), isolated `uv` venv | no |
-| gfftk | 26.5.22 | - | same venv (helixerlite dependency) | no |
-| TensorFlow (`tensorflow[and-cuda]`) | 2.15.1 | - | same venv | no |
-| tensorflow-addons | 0.23.0 | - | resolved dependency | no |
-| CPython | 3.11.15 | - | `uv venv --python 3.11` | minor only |
+| **Helixer (web tool)** | **0.3.6** | official service, plabipd.de | external, managed by the service | n/a |
+| helixerlite *(superseded run only)* | 25.5.27 | commit 04c8086, cp311 wheel | Kaggle (Tesla P100), isolated `uv` venv | no |
+| gfftk *(superseded run only)* | 26.5.22 | - | same venv (helixerlite dependency) | no |
+| TensorFlow (`tensorflow[and-cuda]`) *(superseded run only)* | 2.15.1 | - | same venv | no |
+| tensorflow-addons *(superseded run only)* | 0.23.0 | - | resolved dependency | no |
+| CPython *(superseded run only)* | 3.11.15 | - | `uv venv --python 3.11` | minor only |
+
+The Helixer annotation reported in the manuscript was produced with the
+**official Helixer web tool v0.3.6**. The `helixerlite` stack listed below it
+belongs to a **first, superseded run** and is kept in the table only so that the
+provenance of `scripts/run_helixer.py` remains legible. See section 4.
 
 Two gffread versions were used. The Liftoff and miniprot proteomes were
 extracted by the Snakemake workflow with gffread 0.12.7, pinned in
@@ -99,7 +105,10 @@ time in the absence of a constraint. Adding these constraints changes the hash o
 the affected environments, so Snakemake will rebuild them on the next run; that
 is expected and does not invalidate anything already executed.
 
-**Determined versus reconstructed.** `helixerlite` was installed without a
+**Determined versus reconstructed** *(applies to the superseded `helixerlite`
+run only; the current annotation was produced with the Helixer web tool, whose
+environment is managed by the service and is not under the user's control).*
+`helixerlite` was installed without a
 version constraint and its version is not recorded in the output GFF3. It is
 *determined* as 25.5.27: only three releases exist on PyPI and that one has been
 current since 27 May 2025, more than a year before the run. The same
@@ -163,11 +172,10 @@ Consequences for anyone reusing or extending this work:
   reference annotation. This was not done for the results reported here.
 
 A second, independent asymmetry affects the *ab initio* branch: **Helixer** was
-run on scaffolds of at least 10 kb (3,640 scaffolds, 0.34 % of the total,
-holding 1,915,763,599 bp or 81.46 % of the assembled sequence), whereas the
-three homology branches were run on the complete assembly (see section 4.2).
-Completeness figures are therefore not directly comparable between Helixer and
-the homology branches.
+run on scaffolds of at least 25 kb (244 scaffolds, holding 79.6 % of the
+assembled sequence), whereas the three homology branches were run on the
+complete assembly (see section 4.2). Completeness figures are therefore not
+directly comparable between Helixer and the homology branches.
 
 ---
 
@@ -255,24 +263,97 @@ protein count of the resulting `.faa`, not the log verbosity.
 
 ---
 
-## 4. Helixer branch (external GPU execution)
+## 4. Helixer branch (*ab initio*, external execution)
 
-Helixer was run on external infrastructure (Kaggle, Tesla P100 GPU, 16 GB)
-because the development machine has a GPU with 4 GB of VRAM, insufficient for
-inference. For this reason it is **not automated in Snakemake**: doing so would
-suggest a reproducibility that does not exist in practice, since it requires
-specific hardware and a platform account. The resulting GFF3 is treated as a
-documented external input and is provided in the repository. The runner script
-is `scripts/run_helixer.py`.
+Helixer was run on external infrastructure because the development machine has a
+GPU with 4 GB of VRAM, insufficient for inference. For this reason it is **not
+automated in Snakemake**: doing so would suggest a reproducibility that does not
+exist in practice. The resulting GFF3 is treated as a documented external input.
 
-**Citation.** Helixer and HelixerPost are both packaged by `helixerlite` and are
-covered by the same reference: *Helixer: ab initio prediction of primary
-eukaryotic gene models combining deep learning and a hidden Markov model*,
-Nature Methods (2025), DOI
+**The branch was run twice.** Section 4.A describes the **current** run, which
+produced the annotation reported in the manuscript. Section 4.B describes the
+**first, superseded** run, kept because `scripts/run_helixer.py` documents it and
+because the comparison between the two is itself informative.
+
+**Citation.** Helixer and HelixerPost are covered by the same reference:
+*Helixer: ab initio prediction of primary eukaryotic gene models combining deep
+learning and a hidden Markov model*, Nature Methods (2025), DOI
 [10.1038/s41592-025-02939-1](https://doi.org/10.1038/s41592-025-02939-1). Cite
 the published article, not the earlier preprint.
 
-### 4.1. Environment
+---
+
+### 4.A. Current run — official Helixer web tool v0.3.6
+
+The definitive *ab initio* annotation was produced through the official Helixer
+web service, <https://www.plabipd.de/helixer_main.html>, running Helixer
+**v0.3.6**. There is no run script: the execution is a form submission, so the
+parameters below, not a command line, are the record of what was done.
+
+| Parameter | Value |
+|---|---|
+| Interface | official Helixer web tool, plabipd.de |
+| Helixer version | 0.3.6 |
+| Input assembly | `GCA_028534125.1_Lama_glama_HiC_genomic.fna` |
+| Scaffold length filter | **>= 25,000 bp** — **244 scaffolds**, **79.6 %** of the assembled sequence |
+| Lineage | `vertebrate` |
+| Subsequence length | 213,840 bp (lineage default) |
+| Subsequence overlap | **enabled** (lineage defaults) |
+| `overlap-offset` | 106,920 bp |
+| `overlap-core-length` | 160,380 bp |
+| `window-size` (HelixerPost) | 100 |
+| `edge-threshold` (HelixerPost) | 0.1 |
+| `peak-threshold` (HelixerPost) | 0.8 |
+| `min-coding-length` (HelixerPost) | 60 |
+| Output | `Lgla_hx036_helixer_FINAL.gff`, proteome `Lgla_hx036_helixer.faa` |
+
+The four HelixerPost values are the tool's defaults. The web interface exposes no
+control over `peak-threshold`, so alternative values could not be explored; no
+parameter tuning was performed.
+
+**Result versus the superseded run.**
+
+| | First run (4.B) | Current run (4.A) |
+|---|---|---|
+| BUSCO complete | 79.3 % | **85.5 %** |
+| BUSCO fragmented | 6.6 % | **5.9 %** |
+| BUSCO missing | 14.1 % | **8.6 %** |
+| Proteins | 18,933 | **18,765** |
+
+The gain is attributable mainly to overlapping prediction, which removes the
+accuracy loss at subsequence boundaries that the first run incurred every
+213,840 bp.
+
+#### Non-determinism (must be recorded)
+
+The web tool does not activate Helixer's `--deterministic` mode, which is what
+forces deterministic cuDNN and cuBLAS kernels. GPU kernel non-determinism is
+therefore not suppressed.
+
+Two consecutive submissions with **identical input and identical settings**
+returned **18,765** and **18,763** genes, with micro-differences at the
+boundaries of individual models. The 18,765-gene run was the one adopted and
+deposited.
+
+**This annotation is not reproducible bit for bit.** Anyone re-running it should
+expect differences of this order and should not treat a mismatch of a few genes
+as evidence of an error. This is a limitation of the execution route, not of
+Helixer: the command-line tool run with `--deterministic` on the same GPU
+architecture would not have it.
+
+---
+
+### 4.B. First run (SUPERSEDED) — `helixerlite` on Kaggle
+
+**Everything in this subsection describes a run that is no longer the method of
+the manuscript.** It is retained for traceability and to document
+`scripts/run_helixer.py`, which is marked as superseded in its own header. The
+figures below (scaffolds >= 10 kb, no overlap, BUSCO 79.3 %) must not be quoted
+as current.
+
+It was run on Kaggle (NVIDIA Tesla P100 GPU, 16 GB).
+
+### 4.1. Environment *(superseded run)*
 
 ```bash
 uv venv --python 3.11 /tmp/hxenv
@@ -295,13 +376,14 @@ Note that the DOI above resolves to this specific version; a newer version of
 the record exists. The `helixerlite` Python API is used (`fasta2hdf5`,
 `HybridModel`, `preds2gff3`) together with `gfftk` for the final conversion.
 
-### 4.2. Substrate and parameters
+### 4.2. Substrate and parameters *(superseded run)*
 
 Scaffolds of length 10 kb or greater were retained: **3,640 scaffolds** (0.34 %
 of the total) that account for **1,915,763,599 bp**, i.e. **81.46 %** of the
-assembled sequence. The homology branches were run on the complete assembly
-(2,351,761,190 bp). This substrate asymmetry conditions any direct comparison of
-completeness and must be kept in mind when interpreting the results.
+assembled sequence. **The current run uses a different substrate: scaffolds
+>= 25 kb, 244 scaffolds, 79.6 % of the assembly (section 4.A).** The homology
+branches were run on the complete assembly (2,351,761,190 bp). This substrate
+asymmetry conditions any direct comparison of completeness in either case.
 
 Parameters: no overlap, batch size 16. The substrate was processed in seven
 consecutive blocks of 300 Mb (`CHUNK_BP = 300_000_000`) due to the platform's
@@ -309,7 +391,7 @@ session time limit (about 12 hours). Intermediate files were written to ample
 temporary storage and the partial GFF3s to a persistent working directory, so
 that the run was resumable.
 
-### Helixer run parameters
+### Helixer run parameters *(superseded run — for the current one see 4.A)*
 
 Helixer was run through `helixerlite` on Kaggle (NVIDIA Tesla P100) inside an
 isolated virtual environment created with `uv`.
@@ -350,7 +432,7 @@ result verified: all seven blocks represented, no duplicate identifiers, and 42
 exon features with invalid coordinates discarded by gffread, none of them
 affecting a CDS.
 
-### 4.3. Resuming across sessions
+### 4.3. Resuming across sessions *(superseded run)*
 
 The complete run (about 14 hours) exceeds the session limit. On resume, the
 already-computed blocks must be recovered from the previous session's output,
@@ -367,7 +449,7 @@ for f in glob.glob("/kaggle/input/**/chunk*.gff3", recursive=True):
 
 The script detects the blocks present and processes only the pending ones.
 
-### 4.4. GFF3 integrity check
+### 4.4. GFF3 integrity check *(superseded run)*
 
 The concatenation of the seven blocks was verified before use:
 

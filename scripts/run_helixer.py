@@ -1,5 +1,19 @@
 
 # =====================================================================
+# SUPERSEDED -- NOT the method used in the final manuscript.
+#
+# This script documents the first Helixer run: helixerlite 25.5.27,
+# scaffolds >= 10 kb, NO subsequence overlap, model loaded by path.
+#
+# The definitive ab initio annotation was produced with the official
+# Helixer web tool v0.3.6 (plabipd.de), with overlap enabled by default
+# for the vertebrate lineage and scaffolds >= 25 kb. BUSCO completeness
+# rose from 79.3% to 85.5%.
+#
+# Kept for historical traceability only.
+# =====================================================================
+
+# =====================================================================
 # run_helixer.py - Helixer (ab initio) branch, external GPU execution
 #
 # Run on Kaggle (NVIDIA Tesla P100) inside an isolated `uv` virtual environment;

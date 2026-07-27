@@ -16,6 +16,21 @@ Diseno:
     despues (lifton, helixer) aparecen sin tocar el codigo.
   - Cuenta proteinas del .faa real evaluado por BUSCO, no mRNA del GFF.
   - Tolera ficheros ausentes: informa de lo que hay y omite el resto.
+
+PRECAUCION -- LEER ANTES DE REGENERAR EL INFORME.
+
+  Las cifras de BUSCO no estan codificadas en el script: se leen de los
+  ficheros de --busco-dir. Precisamente por eso, si `results/busco/` sigue
+  conteniendo la salida de la primera ejecucion de Helixer (helixerlite,
+  scaffolds >= 10 kb, sin solapamiento), la tabla se regenerara con el
+  79,3 % antiguo en lugar del 85,5 % vigente. Antes de volver a ejecutar
+  este script hay que sustituir esa carpeta por la salida BUSCO de la
+  anotacion vigente (web tool de Helixer v0.3.6, scaffolds >= 25 kb).
+
+  La nota final sobre el sustrato SI lleva valores codificados en el
+  cuerpo del script (funcion main, seccion "Nota sobre el sustrato").
+  Se ha actualizado al sustrato vigente; si el sustrato vuelve a cambiar,
+  hay que editarla a mano.
 """
 import argparse
 import glob
@@ -269,10 +284,12 @@ def main():
     L.append("Los brazos de homologia se ejecutaron sobre el ensamblado "
              "completo (2.351.761.190 bp). Helixer, por restricciones de "
              "computo, se ejecuto sobre los scaffolds de longitud igual o "
-             "superior a 10 kb: 3.640 scaffolds (0,34 % del total) que reunen "
-             "1.915.763.599 bp, el 81,46 % de la secuencia ensamblada. Esta "
-             "asimetria condiciona toda comparacion directa de completitud "
-             "entre Helixer y los brazos de homologia.")
+             "superior a 25 kb: 244 scaffolds, el 79,6 % de la secuencia "
+             "ensamblada. Esta asimetria condiciona toda comparacion directa "
+             "de completitud entre Helixer y los brazos de homologia. "
+             "(Sustrato de la ejecucion vigente con la web tool de Helixer "
+             "v0.3.6; la primera ejecucion, con helixerlite y sin "
+             "solapamiento, uso scaffolds >= 10 kb y esta superada.)")
     L.append("")
 
     os.makedirs(os.path.dirname(args.out_md) or ".", exist_ok=True)

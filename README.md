@@ -53,7 +53,8 @@ proteome (ceiling) and a previous llama proteome (baseline):
 The Snakemake workflow automates the data acquisition, the **Liftoff** and
 **miniprot** branches, and their BUSCO / AGAT / gffcompare QC. **LiftOn** and
 **Helixer** were added later and are run **manually** (LiftOn) or on **external
-GPU infrastructure** (Helixer); they are *not* wired into the `Snakefile`. The
+infrastructure** (Helixer, through the official web tool); they are *not* wired
+into the `Snakefile`. The
 exact commands to reproduce them are documented in
 [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md). The comparative report
 (`scripts/build_report.py`) discovers whichever branches are present under
@@ -115,28 +116,47 @@ Helixer with the homology branches.
 
 ### Helixer run conditions (important)
 
-Three aspects of how the *ab initio* branch was run must be taken into account
-before comparing its completeness figures with those of the homology branches.
+The *ab initio* branch was re-run after the first version of this repository was
+released. **The annotation reported in the manuscript is the second run**, and
+the two differ in method, substrate and results. `scripts/run_helixer.py`
+documents the first run only and is retained for traceability, marked as
+superseded.
 
-**Substrate.** Helixer was run on scaffolds of at least 10 kb: 3,640 scaffolds,
-0.34 % of the total by count, holding 1,915,763,599 bp or 81.46 % of the
-assembled sequence. The three homology branches were run on the complete
-assembly.
+| | First run (superseded) | Current run (manuscript) |
+|---|---|---|
+| Tool | `helixerlite` 25.5.27 on Kaggle | **official Helixer web tool v0.3.6** (plabipd.de) |
+| Subsequence overlap | none | **enabled** (`vertebrate` lineage defaults) |
+| Substrate | scaffolds >= 10 kb (3,640; 81.46 % of assembly) | scaffolds >= 25 kb (**244**; **79.6 %** of assembly) |
+| BUSCO complete | 79.3 % | **85.5 %** |
+| BUSCO fragmented | 6.6 % | **5.9 %** |
+| BUSCO missing | 14.1 % | **8.6 %** |
+| Proteins | 18,933 | **18,765** |
 
-**No subsequence overlap.** Prediction was performed on 213,840 bp subsequences
-with no overlap between them. Overlapping prediction exists in Helixer to
-mitigate the loss of accuracy at subsequence boundaries; running without it
-leaves one such boundary every 213,840 bp across 1.92 Gb. The completeness
-reported here is therefore a lower bound on what Helixer can achieve on this
-assembly, not a representative measure of the tool's performance.
+**Substrate.** The current run used scaffolds of at least 25 kb: 244 scaffolds,
+holding 79.6 % of the assembled sequence. The three homology branches were run on
+the complete assembly, so completeness is still not directly comparable between
+Helixer and the homology branches.
 
-**Model loaded by path.** The model was supplied with `--load-model-path` rather
-than selected with `--lineage`, so the lineage-based parameter defaults were not
-applied.
+**Subsequence overlap.** Prediction used the overlapping mode that the web tool
+applies by default for the `vertebrate` lineage: subsequence length 213,840 bp,
+overlap offset 106,920 bp, overlap core length 160,380 bp. Overlapping mitigates
+the loss of accuracy at subsequence boundaries and is the main reason for the
+6.2-point gain in BUSCO completeness over the first run, which had no overlap.
 
-These are properties of this particular run, not of the method. Users comparing
-the four annotation sets should read the Helixer figures as descriptive of the
-data released here rather than as a benchmark of *ab initio* prediction.
+**Post-processing.** HelixerPost was left at its defaults: `window-size` 100,
+`edge-threshold` 0.1, `peak-threshold` 0.8, `min-coding-length` 60. The web
+interface does not allow other values of `peak-threshold` to be explored, so no
+parameter tuning was performed.
+
+**Non-determinism (important).** The web tool does not enable Helixer's
+deterministic mode, so GPU kernel non-determinism is not suppressed. Two
+consecutive runs on identical input yielded **18,765 and 18,763 genes**, with
+micro-differences at model boundaries. The 18,765-gene run was adopted. **This
+annotation is therefore not reproducible bit for bit**, and any attempt to
+regenerate it should expect differences of this order.
+
+Full parameters and provenance are in
+[`REPRODUCIBILITY.md`](REPRODUCIBILITY.md), section 4.
 
 ### Genomes (configurable in `workflow/config/config.yaml`)
 
@@ -170,9 +190,16 @@ data released here rather than as a benchmark of *ab initio* prediction.
 │       ├── busco.yaml         # BUSCO
 │       └── gfftools.yaml      # gffread + gffcompare
 ├── scripts/
+│   ├── README.md              # what each script produces and its caveats
 │   ├── build_report.py        # builds the comparative report (called by the `report` rule)
 │   ├── run_lifton.sh          # LiftOn branch wrapper (manual; see REPRODUCIBILITY.md sec. 3)
-│   └── run_helixer.py         # Helixer ab initio runner (external GPU; see REPRODUCIBILITY.md sec. 4)
+│   ├── run_helixer.py         # first Helixer run (SUPERSEDED; kept for traceability)
+│   ├── overlap_md5.py         # exact-sequence overlap between the four proteomes
+│   ├── overlap_coords.py      # positional novelty / loss of Helixer against the homology branches
+│   ├── structural_stats.py    # structural statistics per annotation (length, CDS/transcript, monoexonic)
+│   ├── internal_stops.py      # internal stop codons per proteome
+│   ├── camelidae_landscape.py # annotation landscape across Camelidae (species selection)
+│   └── make_interproscan_input.py  # MD5 deduplication and batching for InterProScan
 ├── REPRODUCIBILITY.md         # exact commands: automated branches + manual LiftOn / Helixer
 ├── CITATION.cff
 ├── .zenodo.json
