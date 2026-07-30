@@ -158,11 +158,10 @@ novedad real la da `overlap_coords.py`, y sale un orden de magnitud menor.
 *ab initio* construye ORFs por definición y no puede producir stops internos. Solo los
 tres brazos de homología son comparables entre sí.
 
-**Las proteínas más largas de Helixer no son inequívocamente mejores.** Puede ser mejor
-modelado o sobre-extensión. Distinguirlo exigía cobertura por alineamiento contra una
-referencia, y **ya está hecho**: es la sección 3. La respuesta, sin embargo, invierte el
-planteamiento original. Medido contra **alpaca** —que es lo que aquí se proponía— Helixer
-parecería sobre-extender, pero esa lectura es un artefacto de circularidad. Medido contra
-**dromedario**, que es la referencia válida, los cuatro brazos son indistinguibles. La
-referencia frente a la que se mide no es un detalle de implementación: decide el signo de
-la conclusión.
+**Las proteínas más largas de Helixer NO son sobre-extensión.** Fue una duda abierta
+durante un tiempo y la resolvió el análisis de la sección 3. Medido contra *V. pacos*,
+Helixer parecería sobre-extender veinte veces más que LiftOn, pero es un artefacto de la
+circularidad: los brazos de homología alinean contra su propia fuente. Medido contra
+*C. dromedarius*, que es el patrón externo, los cuatro brazos son indistinguibles. La
+explicación de la mayor longitud media es la preselección: Helixer solo emite modelos
+donde consigue construir un ORF completo.
