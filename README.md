@@ -61,6 +61,11 @@ exact commands to reproduce them are documented in
 `results/busco/`, so all four appear in the final table regardless of how they
 were produced.
 
+The two downstream analyses added later — **functional annotation** with
+InterProScan and **model accuracy** with DIAMOND — are outside the `Snakefile`
+for the same reason, and are documented in their own sections below and in
+`REPRODUCIBILITY.md`.
+
 ### Reference asymmetry between homology branches (important)
 
 The three homology branches did not start from the same reference annotation.
@@ -174,6 +179,121 @@ Full parameters and provenance are in
 - A comparative report (`results/report/comparison_report.md` +
   `comparison_table.tsv`).
 
+## Functional annotation (InterProScan)
+
+The four proteomes were annotated with **InterProScan 5.78-109.0**, running the
+18 analyses enabled by default. Like LiftOn and Helixer, this step is **not
+wired into the `Snakefile`**; the exact commands are in
+[`REPRODUCIBILITY.md`](REPRODUCIBILITY.md).
+
+**Input: deduplication by MD5.** The four proteomes hold 80,331 sequences
+between them, but only **42,364 are distinct**. Annotating the unique set
+instead of the union saves **47.3 %** of the compute. The deduplicated FASTA
+uses the MD5 digest as the sequence identifier, which is what makes the mapping
+file **`md5_to_ids.tsv` indispensable**: without it the results cannot be
+attributed back to each proteome, because the annotated identifiers no longer
+carry any branch information.
+
+**Precalculated match lookup disabled (`-dp`).** The lookup service resolves a
+query by exact MD5 against UniProtKB. Llama proteins are not in UniProtKB —
+which is the premise of this work — so the service can only ever miss. It was
+switched off rather than left to fail silently.
+
+**Java.** InterProScan 5.78-109.0 requires **OpenJDK 11**. OpenJDK 17 does not
+work.
+
+**Input cleaning.** The three homology proteomes contain the `.` character,
+gffread's rendering of an in-frame stop, because many transferred models have a
+broken reading frame. InterProScan aborts at `stepLoadFromFastaIntoDB` when it
+finds one. Each `.` is therefore **replaced by `X`, not deleted**: substitution
+preserves sequence length and hence the domain coordinates, whereas deletion
+would shift every downstream position.
+
+| Branch | Proteins | With domain | % | With Pfam | % |
+|---|---|---|---|---|---|
+| liftoff | 20,073 | 18,127 | 90.3 | 17,379 | 86.6 |
+| miniprot | 21,260 | 19,921 | 93.7 | 19,056 | 89.6 |
+| lifton | 20,233 | 18,996 | 93.9 | 18,254 | 90.2 |
+| helixer | 18,765 | 17,735 | 94.5 | 16,913 | 90.1 |
+
+**754,835 annotations** over **40,402** of the 42,364 unique proteins
+(**95.4 %**). "With domain" **excludes MobiDBLite and Coils**, which predict
+disorder and coiled-coil structure respectively and annotate almost any protein;
+counting them would make every branch look near-perfect.
+
+> **PANTHER is reported at family level only.** The TSV output never emits the
+> subfamily (`PTHR12345:SF6`), not even when phylogenetic placement succeeds.
+> Verified against InterProScan's own official test file, which yields zero
+> subfamilies in TSV and the five expected ones in XML, and whose run produced no
+> abort. Subfamily resolution requires a structured output format and was not
+> used here.
+
+**Caution — the denominators are not equivalent.** Helixer predicts 18,765
+proteins against the 20,000–21,000 of the other three, and it only emits a model
+where it can build a complete ORF. Its protein set is therefore pre-filtered for
+structural plausibility, so its percentage starts from an advantage. The
+column to compare across branches is the count, not the ratio, unless that
+asymmetry is stated alongside it.
+
+## Model accuracy against external references (DIAMOND)
+
+The four proteomes were aligned against two reference proteomes with **DIAMOND
+2.2.4** in `blastp --very-sensitive` mode, with `--max-target-seqs 1
+--max-hsps 1 --evalue 1e-5`. This is the fourth quality criterion of Kourelis
+et al. (2019), and the only one in this work that evaluates **model accuracy**
+rather than completeness or internal consistency. Like the previous step, it is
+not automated in the `Snakefile`.
+
+**Why DIAMOND and not BLASTP.** Llama and alpaca diverged a few million years
+ago and their orthologues sit at 95–99 % identity. These are trivial alignments
+with no sensitivity problem to solve, so the accelerated heuristic costs nothing
+that matters here and returns the whole comparison in **18 minutes instead of
+days**.
+
+**Two references, and the distinction between them is the point of this
+section.**
+
+| Reference | Accession | Role |
+|---|---|---|
+| *Camelus dromedarius* | `GCF_036321535.1` (mCamDro1.pat, RS_2024_04, 50,982 proteins) | **External yardstick. The valid comparison** |
+| *Vicugna pacos* | `GCF_048564905.1` | Internal control. **Circular** |
+
+Results against *C. dromedarius*:
+
+| Branch | With hit | % | Identity | Subject >=80 % | Query >=80 % |
+|---|---|---|---|---|---|
+| liftoff | 18,423 | 91.8 | 95.6 | 85.5 | 89.8 |
+| miniprot | 20,519 | 96.5 | 94.5 | 82.7 | 88.7 |
+| lifton | 19,277 | 95.3 | 95.5 | 84.2 | 92.6 |
+| helixer | 17,945 | 95.6 | 92.6 | 81.7 | 91.4 |
+
+> **The reference chosen decides the conclusion.** Measured against alpaca,
+> Helixer appears to over-extend its models twenty times more often than LiftOn
+> (2.0 % versus 0.0 %). Measured against dromedary, all four branches sit at the
+> same 2 % and are indistinguishable.
+>
+> The cause is circularity. Three of the four branches are projections of the
+> alpaca annotation and align almost perfectly against their own source, so their
+> 0.0 % measures identity with themselves, not model quality. Only the *ab
+> initio* branch is independent of that reference, and it is the only one the
+> comparison penalises.
+>
+> **Had alpaca been used as the yardstick, this work would have reported that the
+> *ab initio* branch over-extends its models, and that claim would have been
+> false.** The alpaca figures are retained as an internal control, and must not be
+> read as a measure of accuracy.
+
+Two further caveats:
+
+- **Do not report the median coverages.** They come out at 100 % for all four
+  branches against both references: they saturate and discriminate nothing. Use
+  the fraction of proteins with coverage >=80 %, which is what the tables above
+  report. (`scripts/analyze_blastp.py` still computes and prints the medians;
+  they are diagnostic output, not a result.)
+- **One HSP per pair.** `--max-hsps 1` means that in multidomain proteins whose
+  alignment fragments, coverage is recorded as artificially low. The approximation
+  is conservative in the right direction: it underestimates, it does not inflate.
+
 ## Repository layout
 
 ```
@@ -199,8 +319,14 @@ Full parameters and provenance are in
 │   ├── structural_stats.py    # structural statistics per annotation (length, CDS/transcript, monoexonic)
 │   ├── internal_stops.py      # internal stop codons per proteome
 │   ├── camelidae_landscape.py # annotation landscape across Camelidae (species selection)
-│   └── make_interproscan_input.py  # MD5 deduplication and batching for InterProScan
-├── REPRODUCIBILITY.md         # exact commands: automated branches + manual LiftOn / Helixer
+│   ├── make_interproscan_input.py  # MD5 deduplication and batching for InterProScan
+│   ├── run_ips.sh             # InterProScan in resumable batches
+│   ├── estado_ips.sh          # InterProScan progress monitor
+│   ├── run_blastp.sh          # DIAMOND alignment against two reference proteomes
+│   ├── analyze_blastp.py      # coverage analysis and per-branch assignment
+│   └── estado_blastp.sh       # DIAMOND progress monitor
+├── REPRODUCIBILITY.md         # exact commands: automated branches, manual LiftOn / Helixer,
+│                              #   InterProScan (sec. 6) and DIAMOND (sec. 7)
 ├── CITATION.cff
 ├── .zenodo.json
 ├── LICENSE

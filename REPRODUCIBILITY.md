@@ -7,7 +7,10 @@ that anyone can reproduce the complete result.
 The distinction is deliberate and stated openly: the Snakemake pipeline does not
 reproduce the four annotation branches end to end. Two of them (LiftOn and
 Helixer) were incorporated into the project after the workflow was written and
-were executed with the commands documented here.
+were executed with the commands documented here. The same applies to the two
+downstream analyses added later: functional annotation with InterProScan
+(section 6) and model accuracy against external references with DIAMOND
+(section 7).
 
 ---
 
@@ -23,6 +26,8 @@ were executed with the commands documented here.
 | Proteome extraction (gffread) | Partial | Manual for LiftOn and Helixer |
 | BUSCO quality control | Yes for the automated branches | Manual for LiftOn and Helixer |
 | Comparative report | Yes | `scripts/build_report.py` |
+| Functional annotation (InterProScan) | **No** | Manual, section 6 |
+| Model accuracy against external references (DIAMOND) | **No** | Manual, section 7 |
 
 `scripts/build_report.py` discovers the methods by scanning `results/busco/`, so
 it adds to the report any branch present, whether or not it is automated.
@@ -65,6 +70,9 @@ after the fact, except where explicitly noted as reconstructed.
 | AGAT | 1.7.0 | pl5321hdfd78af_0 | `envs/agat.yaml` | no |
 | BUSCO | 6.1.0 | pyhdfd78af_1 | `envs/busco.yaml` | yes |
 | Snakemake | 9.23.1 | - | host | n/a |
+| **InterProScan** | **5.78-109.0** | official distribution, `~/interproscan/` | standalone, outside conda | n/a |
+| **OpenJDK** | **11** | conda environment, **not the system JDK** | InterProScan dependency | yes |
+| **DIAMOND** | **2.2.4** | - | conda | n/a |
 | **Helixer (web tool)** | **0.3.6** | official service, plabipd.de | external, managed by the service | n/a |
 | helixerlite *(superseded run only)* | 25.5.27 | commit 04c8086, cp311 wheel | Kaggle (Tesla P100), isolated `uv` venv | no |
 | gfftk *(superseded run only)* | 26.5.22 | - | same venv (helixerlite dependency) | no |
@@ -517,7 +525,198 @@ handles all naming variants.
 
 ---
 
-## 6. Generating the comparative report
+## 6. Functional annotation (InterProScan)
+
+Run outside the `Snakefile`, like the LiftOn and Helixer branches. Scripts:
+`scripts/make_interproscan_input.py`, `scripts/run_ips.sh`,
+`scripts/estado_ips.sh`.
+
+### 6.1. Preparing the input
+
+The four proteomes hold 80,331 sequences, of which **42,364 are distinct**.
+`make_interproscan_input.py` deduplicates by MD5 digest, cleans characters
+InterProScan rejects, and splits the result into batches:
+
+```bash
+python3 scripts/make_interproscan_input.py
+# -> camelid_unique_proteins_clean.faa   42,364 sequences
+# -> md5_to_ids.tsv                      md5 -> original identifiers, per branch
+# -> ips_chunks/chunk_XXX.faa            43 batches of 1,000 sequences
+```
+
+Two properties of this step are not optional.
+
+**`md5_to_ids.tsv` is indispensable.** The deduplicated FASTA uses the MD5 digest
+as the sequence identifier, so InterProScan's output carries no branch
+information at all. Without this mapping the 754,835 annotations cannot be
+attributed to liftoff, miniprot, lifton or helixer, and the per-branch table
+cannot be rebuilt.
+
+**In-frame stops are substituted, not deleted.** The three homology proteomes
+contain `.` characters, gffread's rendering of an in-frame stop, because many
+transferred models have a broken reading frame. InterProScan aborts at
+`stepLoadFromFastaIntoDB` on encountering one. Each `.` is replaced by `X`.
+Substitution preserves sequence length and therefore the domain coordinates;
+deletion would shift every position downstream of the stop.
+
+### 6.2. Running InterProScan
+
+`scripts/run_ips.sh` iterates over the batches:
+
+```bash
+nice -n 19 ionice -c3 \
+  ~/interproscan/interproscan-5.78-109.0/interproscan.sh \
+    -i  ips_chunks/chunk_XXX.faa \
+    -f  TSV \
+    -o  ips_out/chunk_XXX.tsv \
+    -cpu 4 \
+    -dp \
+    -T  ips_tmp \
+  > ips_out/chunk_XXX.log 2>&1
+```
+
+**Version: 5.78-109.0**, running the 18 analyses enabled by default.
+
+**`-dp` disables the precalculated match lookup.** That service resolves a query
+by exact MD5 against UniProtKB. Llama proteins are not in UniProtKB, which is the
+premise of this work, so the lookup can only ever miss. It was switched off
+rather than left to fail silently over 42,364 queries.
+
+**Java: OpenJDK 11 is required.** OpenJDK 17 does not work with this release. The
+JDK used came from a conda environment, not from the system installation.
+
+**Resumption and housekeeping.** The script skips any batch whose `.tsv` already
+exists and is non-empty, so an interrupted run resumes where it stopped. It
+aborts if less than 15 GB remain free in `$HOME`, and clears `ips_tmp/` after
+each successful batch; InterProScan's temporary files otherwise accumulate to
+tens of gigabytes over 43 batches.
+
+`scripts/estado_ips.sh` is a read-only monitor: it counts completed `.tsv` files
+against available batches, detects a live process with `pgrep -f interproscan`,
+and extrapolates the remaining time from an observed rate of roughly 80 minutes
+per batch. That figure is an empirical observation on the development machine,
+not a specification.
+
+### 6.3. Result
+
+**754,835 annotations over 40,402 of the 42,364 unique proteins (95.4 %).** The
+per-branch breakdown, obtained by expanding the results through
+`md5_to_ids.tsv`, is in the `README.md`. Two points that belong with the numbers:
+
+- The "with domain" counts **exclude MobiDBLite and Coils**. Both predict generic
+  properties — disorder and coiled-coil structure — and annotate almost any
+  protein, so including them makes every branch look near-perfect and removes the
+  discrimination the table is meant to provide.
+- **PANTHER is reported at family level only.** The TSV output never emits the
+  subfamily (`PTHR12345:SF6`), not even when phylogenetic placement succeeds.
+  Verified against InterProScan's own official test file, which yields zero
+  subfamilies in TSV and the five expected ones in XML, and whose run produced no
+  abort. Subfamily resolution requires a structured output format and was not
+  used.
+
+---
+
+## 7. Model accuracy against external references (DIAMOND)
+
+Run outside the `Snakefile`. Scripts: `scripts/run_blastp.sh`,
+`scripts/analyze_blastp.py`, `scripts/estado_blastp.sh`.
+
+This is the fourth quality criterion of Kourelis et al. (2019) and the only step
+in this work that evaluates **model accuracy** rather than completeness or
+internal consistency.
+
+### 7.1. Why DIAMOND rather than BLASTP
+
+Llama and alpaca diverged a few million years ago and their orthologues sit at
+95-99 % identity. These are trivial alignments: there is no remote-homology
+sensitivity problem for BLASTP's exhaustive search to solve. **DIAMOND 2.2.4** in
+`--very-sensitive` mode returns the complete comparison in about 18 minutes,
+against days for BLASTP, and the accelerated heuristic costs nothing that matters
+at this evolutionary distance.
+
+### 7.2. References
+
+| Reference | Accession | Role |
+|---|---|---|
+| *Camelus dromedarius* | `GCF_036321535.1` (mCamDro1.pat, RS_2024_04, 50,982 proteins) | **External yardstick. The valid comparison** |
+| *Vicugna pacos* | `GCF_048564905.1` | Internal control. **Circular** |
+
+### 7.3. Commands
+
+```bash
+# one database per reference
+diamond makedb --in <reference>/proteome.faa -d blastp/<name> --threads 4
+
+# alignment, identical parameters for both references
+diamond blastp \
+  -q camelid_unique_proteins_clean.faa \
+  -d blastp/<name> \
+  -o blastp/hits_<name>.tsv \
+  --outfmt 6 qseqid sseqid pident length qstart qend sstart send \
+              evalue bitscore qlen slen \
+  --very-sensitive \
+  --max-target-seqs 1 \
+  --max-hsps 1 \
+  --evalue 1e-5 \
+  --threads 4 \
+  --tmpdir blastp/tmp
+
+python3 scripts/analyze_blastp.py
+```
+
+`qlen` and `slen` must be in the output format: the coverage figures are derived
+from them, as `100 * (send - sstart + 1) / slen` for the subject and
+`100 * (qend - qstart + 1) / qlen` for the query.
+
+**Resumption.** `run_blastp.sh` skips `makedb` and `blastp` when the output
+exists and is non-empty, writes to a `.partial` file and renames it atomically on
+success, deleting it on failure. An interrupted run therefore never leaves a
+truncated hit table that a later step would silently treat as complete.
+
+**Paths are machine-specific.** The script points at the reference proteomes
+under a local research-data mount. Anyone re-running it must edit those paths;
+the accessions in the table above are what identifies the data.
+
+`scripts/estado_blastp.sh` is a read-only monitor of the run.
+
+### 7.4. Result, and the methodological finding
+
+The figures against *C. dromedarius* are in the `README.md`. The result worth
+recording here is not any single number but the effect of the choice of
+reference:
+
+> Measured against alpaca, Helixer appears to over-extend its models twenty times
+> more often than LiftOn (2.0 % versus 0.0 %). Measured against dromedary, all
+> four branches sit at the same 2 % and are indistinguishable.
+>
+> Three of the four branches are projections of the alpaca annotation. They align
+> almost perfectly against their own source, so their 0.0 % measures identity
+> with themselves rather than model quality. Only the *ab initio* branch is
+> independent of that reference, and it is the only one the comparison penalises.
+>
+> **Had alpaca been used as the yardstick, this work would have reported that the
+> *ab initio* branch over-extends its models, and that claim would have been
+> false.**
+
+The alpaca comparison is retained as an internal control and must not be read as
+a measure of accuracy.
+
+Two limitations, declared:
+
+- **Median coverages are not reported.** They come out at 100 % for all four
+  branches against both references: they saturate and discriminate nothing.
+  The reported statistic is the fraction of proteins with coverage >= 80 %.
+  `analyze_blastp.py` still computes and prints the medians; that output is
+  diagnostic, not a result.
+- **One HSP per pair.** `--max-hsps 1` means that in multidomain proteins whose
+  alignment fragments into several local matches, only one is counted and
+  coverage is recorded as artificially low. The approximation errs in the
+  conservative direction: it underestimates coverage, it does not inflate it.
+
+
+---
+
+## 8. Generating the comparative report
 
 ```bash
 snakemake --use-conda --cores 4 results/report/comparison_report.md
@@ -540,7 +739,7 @@ and assembles the comparative table from them.
 
 ---
 
-## 7. Input data
+## 9. Input data
 
 | Resource | Identifier |
 |---|---|
