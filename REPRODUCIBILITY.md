@@ -9,8 +9,14 @@ reproduce the four annotation branches end to end. Two of them (LiftOn and
 Helixer) were incorporated into the project after the workflow was written and
 were executed with the commands documented here. The same applies to the two
 downstream analyses added later: functional annotation with InterProScan
-(section 6) and model accuracy against external references with DIAMOND
-(section 7).
+(section 6), model accuracy against external references with DIAMOND (section 7),
+the characterisation of positional novelty (section 8) and the manuscript figures
+and tables (section 9).
+
+**If you are reproducing published figures, read section 10.0 first.** Three bugs
+that affected reported numbers were fixed on 14 August 2026, and anything
+produced by `structural_stats.py` or `build_report.py` before that date is
+suspect.
 
 ---
 
@@ -28,6 +34,8 @@ downstream analyses added later: functional annotation with InterProScan
 | Comparative report | Yes | `scripts/build_report.py` |
 | Functional annotation (InterProScan) | **No** | Manual, section 6 |
 | Model accuracy against external references (DIAMOND) | **No** | Manual, section 7 |
+| Positional novelty of the *ab initio* branch | **No** | Manual, section 8 |
+| Manuscript figures and tables | **No** | Manual, section 9 |
 
 `scripts/build_report.py` discovers the methods by scanning `results/busco/`, so
 it adds to the report any branch present, whether or not it is automated.
@@ -716,7 +724,184 @@ Two limitations, declared:
 
 ---
 
-## 8. Generating the comparative report
+## 8. Positional novelty of the *ab initio* branch
+
+Run outside the `Snakefile`. Script: `scripts/novel_loci_blast.py`.
+
+### 8.1. What the script does, and what it does not
+
+`novel_loci_blast.py` **runs no alignment**. It merges the coordinates of the
+three homology annotations, finds the Helixer transcripts whose coordinates do
+not overlap any of them, applies a minimum length of 1 kb (`MIN_LEN = 1000`), and
+cross-references the survivors against the DIAMOND hit tables produced in
+section 7 (`blastp/hits_dromedario.tsv`, `blastp/hits_alpaca.tsv`). Nothing is
+recomputed.
+
+It writes two files:
+
+```
+blastp/helixer_novel_loci.tsv     mrna_id, scaffold, start, end, length, md5,
+                                  hit_dromedario, hit_alpaca
+blastp/helixer_novel_nohit.faa    the sequences with no camelid hit, ready to be
+                                  aligned against Swiss-Prot
+```
+
+Every figure it reports is computed at run time; none is hardcoded. Standard
+library only.
+
+### 8.2. Swiss-Prot search of the orphan loci
+
+The FASTA of loci with no camelid hit was searched against Swiss-Prot to
+establish whether they have a homologue anywhere. The release used contained
+**575,503 sequences**.
+
+```bash
+# database
+wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
+gunzip -c uniprot_sprot.fasta.gz | grep -c '^>'     # 575,503
+
+diamond makedb --in uniprot_sprot.fasta.gz -d blastp/swissprot --threads 4
+
+# search
+diamond blastp \
+  -q blastp/helixer_novel_nohit.faa \
+  -d blastp/swissprot \
+  -o blastp/hits_swissprot.tsv \
+  --outfmt 6 qseqid sseqid pident length qstart qend sstart send \
+              evalue bitscore qlen slen \
+  --very-sensitive \
+  --max-target-seqs 1 \
+  --max-hsps 1 \
+  --evalue 1e-5 \
+  --threads 4
+```
+
+**Provenance caveat.** This step is *not* captured by any script in the
+repository, unlike every other command in this document. The parameters above
+mirror those of section 7.3, which is what the run used, but they are a
+reconstruction from the working record rather than a transcript of an executed
+script. Anyone reproducing this should treat the Swiss-Prot search as the least
+well-documented step of the whole pipeline.
+
+### 8.3. Result
+
+| | Loci | % |
+|---|---|---|
+| Helixer transcripts > 1 kb with no positional overlap | 790 | 100 |
+| **With an orthologue in another camelid** | **545** | **69.0** |
+| Without a camelid orthologue | 245 | 31.0 |
+| — with a Swiss-Prot homologue | 10 | 1.3 |
+| — with no homologue anywhere | ~235 | 29.7 |
+
+545 loci are real genes that homology transfer failed to place; roughly 235 are,
+on the balance of evidence, **false positives of the prediction** and are
+reported as such. Two independent searches — a sister camelid and a manually
+curated database — returning nothing is hard to reconcile with a genuinely novel
+protein-coding gene.
+
+Positional novelty is not sequence novelty: `scripts/overlap_md5.py` measures
+exact sequence identity and yields counts an order of magnitude larger. The two
+must not be conflated. The 1 kb threshold is a methodological choice and changes
+the denominator.
+
+---
+
+## 9. Figures and tables
+
+Run outside the `Snakefile`. Outputs go to `MANUSCRITO/01_figuras/` (PDF and PNG
+at 300 dpi) and `MANUSCRITO/02_tablas/` (markdown).
+
+### 9.1. Environment
+
+```bash
+conda create -n figuras python=3.11 matplotlib "pandas<3"
+conda activate figuras
+```
+
+`pandas` is pinned below 3 for the working environment as a whole; note that none
+of the seven scripts imports it. The actual imports are **matplotlib** (the four
+figure scripts, all of which set `matplotlib.use("Agg")` and therefore run
+headless) and **numpy** (`fig4_cobertura.py` only). Everything else is standard
+library.
+
+### 9.2. `upsetplot` is not used, deliberately
+
+The `upsetplot` package is **not compatible** with the current versions of pandas
+and matplotlib. `fig2_upset.py` therefore draws the UpSet diagram with plain
+matplotlib — intersection bars, dot matrix and set totals assembled by hand on a
+`GridSpec(2, 2)`. The figure is equivalent; the dependency is avoided rather than
+pinned to an old version.
+
+### 9.3. Scripts
+
+| Script | Output |
+|---|---|
+| `fig1_busco.py` | `fig1_busco.{pdf,png}` — stacked S/D/F/M bars for six proteomes |
+| `fig2_upset.py` | `fig2_upset.{pdf,png}` — 14 intersections by exact sequence identity |
+| `fig3_estructura.py` | `fig3_estructura.{pdf,png}` — CDS per transcript, single-exon fraction |
+| `fig4_cobertura.py` | `fig4_cobertura.{pdf,png}` — coverage >=80 % and apparent over-extension |
+| `tabla_estructura.py` | `tabla1_seccion2.md` |
+| `tabla_funcional.py` | `Tabla2_funcional.md` |
+| `tabla1_final.py` | `Tabla1_FINAL.md`, from `tabla1.md` + `tabla1_seccion2.md` |
+
+`tabla1_final.py` consumes the output of `build_report.py` and locates sections
+by exact heading text. Changing a heading in `build_report.py` breaks it.
+
+
+---
+
+## 10. Generating the comparative report
+
+### 10.0. Corrections of 14 August 2026 — three bugs that affected reported figures
+
+`scripts/structural_stats.py` and `scripts/build_report.py` were rewritten to fix
+three defects. All three produced **wrong numbers**, not merely untidy code, and
+two of them biased a comparison between branches. They are recorded here because
+any figure taken from an earlier run of these scripts is suspect.
+
+**1. `structural_stats.py` — feature parents were not filtered to mRNA.**
+CDS and exon features were grouped by their `Parent` attribute without checking
+that the parent was an mRNA. In the homology GFF3s the `exon` feature also hangs
+from `lnc_RNA`, `tRNA`, `snRNA`, `snoRNA` and `rRNA`. In Liftoff there are
+**34,545 exon parents of which only 20,306 are mRNA**, and the single-exon
+transcript count went from **2,516 to 6,009**.
+
+The bias was **not symmetric**, which is what makes it serious rather than
+merely inaccurate: Helixer emits no non-coding features, so the contamination
+affected only the three homology branches — precisely the axis along which the
+branches were being compared. On CDS the contamination was smaller (49 parents
+out of 20,075) and the published figures barely move, but the method was wrong
+either way. The same fix is applied in `fig3_estructura.py`.
+
+**2. `build_report.py` — the BUSCO glob left out two of the four branches.**
+It looked only for `short_summary.txt` with no suffix. The `lifton` and `helixer`
+directories contain only
+`short_summary.specific.<lineage>.<name>.txt`, so **two of the four branches never
+reached the report at all**. Both patterns are now accepted, without duplicating
+a directory that has both.
+
+**3. `build_report.py` — the AGAT parser read the wrong block.**
+AGAT emits one block per feature type. The loop walked the whole file
+overwriting its accumulator, so it ended up holding the **last** block,
+`v_gene_segment`, and reported **31 genes for Liftoff instead of 20,306**. The
+parser now tracks the active block and reads only `mrna`.
+
+**Hardcoded text.** The report header and footer were rewritten in the same pass.
+The footer now states explicitly that the value of the resource is a llama
+proteome annotated and evaluated by four strategies — **not** the discovery of
+new genes — and it carries an explicit instruction not to use the word "first",
+because an earlier in-house annotation (`chaku_v1`) exists and is used as the
+baseline.
+
+**Restored in the same commit.** The rewrite dropped two items added in an
+earlier audit round, and both were put back on top of it: the report's
+substrate note (>= 25 kb, 244 scaffolds, 79.6 %) and the docstring warning that
+`results/busco/` may still hold the superseded Helixer BUSCO output (79.3 %
+instead of the current 85.5 %). Without the first, the generated Table 1 stops
+warning readers about the substrate asymmetry; without the second, a regenerated
+report can silently carry the old completeness figure.
+
+
 
 ```bash
 snakemake --use-conda --cores 4 results/report/comparison_report.md
@@ -739,7 +924,7 @@ and assembles the comparative table from them.
 
 ---
 
-## 9. Input data
+## 11. Input data
 
 | Resource | Identifier |
 |---|---|

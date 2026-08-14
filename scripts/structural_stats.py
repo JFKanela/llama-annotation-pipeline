@@ -1,69 +1,50 @@
 #!/usr/bin/env python3
+"""Estadisticas estructurales de los cuatro proteomas. VERSION CORREGIDA.
+
+CORRECCION del 14 de agosto de 2026, importante. La version anterior contaba
+las CDS y los exones agrupando por su atributo Parent SIN COMPROBAR que ese
+padre fuera un mRNA. En los GFF3 de homologia el atributo exon cuelga tambien
+de lnc_RNA, tRNA, snRNA, snoRNA y rRNA: en Liftoff hay 34545 padres de exon y
+solo 20306 son mRNA. Eso inflaba el recuento de monoexonicos de 2516 a 6009.
+
+En CDS la contaminacion era menor (49 padres de 20075) y el resultado apenas
+cambiaba, pero el metodo estaba mal igualmente. Y Helixer no emite features no
+codificantes, de modo que el sesgo NO era simetrico entre brazos: afectaba solo
+a los tres de homologia, que es justo lo que invalida una comparacion.
+
+CRITERIO ADOPTADO: una sola CDS, no un solo exon. Es lo coherente con un
+articulo de proteomas, donde importa la estructura de la region codificante y
+no la del transcrito completo, y es el unico aplicable a los cuatro brazos,
+porque miniprot no emite features exon.
+
+Se reportan ambos criterios para poder contrastarlos con AGAT, que usa exones.
 """
-Estadisticas estructurales de los cuatro proteomas y sus anotaciones.
-
-QUE PRODUCE
-  - Longitud de proteina: media, mediana y maximo por brazo.
-  - Numero de CDS por transcrito (proxy de exones codificantes) y porcentaje
-    de transcritos monoexonicos.
-  - Numero de mRNA por gen, que detecta asimetrias de isoformas entre brazos.
-
-QUE SOSTIENE EN EL ARTICULO
-  Eje de calidad INDEPENDIENTE de BUSCO, siguiendo el criterio de Kourelis et al.
-  2019 (BMC Genomics 20:722), que es el modelo declarado del articulo. Los proteomas
-  con modelos truncados tienen proteinas mas cortas; un exceso de genes monoexonicos
-  suele indicar predicciones incompletas o pseudogenes.
-
-HALLAZGO QUE ESTE SCRIPT DESTAPO
-  LiftOn da 1.00 mRNA/gen en el fichero depositado, igual que los demas. Es decir,
-  el proteoma publico es la version de ISOFORMA PRIMARIA y no la completa. Los cuatro
-  brazos estan por tanto en igualdad y las comparaciones de longitud y estructura
-  son directas, sin necesidad de normalizar.
-
-CAUTELA AL INTERPRETAR
-  "Proteinas mas largas" no es inequivocamente mejor: puede indicar mejor modelado
-  o sobre-extension (union de exones que no van juntos, o inclusion de region no
-  codificante). Distinguirlo exige cobertura BLASTP contra la referencia de alpaca.
-  Lo defendible sin ese paso es la descripcion, no el juicio de calidad.
-
-  miniprot no emite jerarquia gene -> mRNA, de modo que su fila de isoformas sale
-  vacia. Es correcto, no es un fallo.
-
-USO
-  python3 structural_stats.py
-"""
-
-import gzip
+import gzip, os
 import statistics as st
 from collections import defaultdict
 
-GFF = {
-    "liftoff":  "llama_liftoff.gff3.gz",
-    "miniprot": "llama_miniprot.gff3.gz",
-    "lifton":   "llama_lifton.gff3.gz",
-    "helixer":  "Lgla_hx036_helixer_FINAL.gff",
-}
-FAA = {
-    "liftoff":  "llama_liftoff.faa.gz",
-    "miniprot": "llama_miniprot.faa.gz",
-    "lifton":   "llama_lifton.faa.gz",
-    "helixer":  "Lgla_hx036_helixer.faa",
-}
+ZEN = os.path.expanduser("~/zenodo_data")
+BASE = os.path.expanduser("~/llama_annotation_pipeline")
+
+FAA = {"Liftoff":  os.path.join(ZEN, "llama_liftoff.faa.gz"),
+       "miniprot": os.path.join(ZEN, "llama_miniprot.faa.gz"),
+       "LiftOn":   os.path.join(ZEN, "llama_lifton.faa.gz"),
+       "Helixer":  os.path.join(BASE, "Lgla_hx036_helixer.faa")}
+GFF = {"Liftoff":  os.path.join(ZEN, "llama_liftoff.gff3.gz"),
+       "miniprot": os.path.join(ZEN, "llama_miniprot.gff3.gz"),
+       "LiftOn":   os.path.join(ZEN, "llama_lifton.gff3.gz"),
+       "Helixer":  os.path.join(BASE, "Lgla_hx036_helixer_FINAL.gff")}
+ARMS = list(FAA)
 
 
-def opener(path):
-    return gzip.open(path, "rt") if path.endswith(".gz") else open(path, "rt")
-
-
-def parse_attrs(attr):
-    return dict(kv.split("=", 1) for kv in attr.split(";") if "=" in kv)
+def opener(p):
+    return gzip.open(p, "rt") if p.endswith(".gz") else open(p, "rt")
 
 
 def parse_gff(path):
-    """Devuelve (CDS por transcrito, longitud CDS por transcrito, mRNA por gen)."""
-    cds_count = defaultdict(int)
-    cds_len = defaultdict(int)
-    mrna_of_gene = defaultdict(set)
+    """Devuelve (CDS por mRNA, exones por mRNA), FILTRANDO padres a mRNA."""
+    mrna = set()
+    cds, exon = defaultdict(int), defaultdict(int)
     with opener(path) as fh:
         for line in fh:
             if line.startswith("#"):
@@ -71,65 +52,46 @@ def parse_gff(path):
             c = line.rstrip("\n").split("\t")
             if len(c) < 9:
                 continue
-            typ, start, end, attr = c[2], int(c[3]), int(c[4]), c[8]
-            if typ == "mRNA":
-                d = parse_attrs(attr)
-                if d.get("Parent"):
-                    mrna_of_gene[d["Parent"]].add(d.get("ID", ""))
-            elif typ == "CDS":
-                d = parse_attrs(attr)
-                par = d.get("Parent")
-                if par:
-                    cds_count[par] += 1
-                    cds_len[par] += (end - start + 1)
-    return cds_count, cds_len, mrna_of_gene
+            d = dict(kv.split("=", 1) for kv in c[8].split(";") if "=" in kv)
+            if c[2] == "mRNA" and d.get("ID"):
+                mrna.add(d["ID"])
+            par = d.get("Parent")
+            if not par:
+                continue
+            if c[2] == "CDS":
+                cds[par] += 1
+            elif c[2] == "exon":
+                exon[par] += 1
+    # AQUI esta la correccion: solo se conservan los padres que son mRNA
+    return ({k: v for k, v in cds.items() if k in mrna},
+            {k: v for k, v in exon.items() if k in mrna},
+            len(mrna))
 
 
 def prot_lengths(path):
-    lens = []
-    cur = 0
+    out, cur = [], 0
     with opener(path) as fh:
         for line in fh:
             if line.startswith(">"):
                 if cur:
-                    lens.append(cur)
+                    out.append(cur)
                 cur = 0
             else:
                 cur += len(line.strip())
         if cur:
-            lens.append(cur)
-    return lens
+            out.append(cur)
+    return out
 
 
-def main():
-    print("--- longitud de proteina (aa) ---")
-    print(f"{'brazo':10s} {'#prot':>7s} {'media':>9s} {'mediana':>8s} {'maximo':>8s}")
-    for arm, path in FAA.items():
-        v = prot_lengths(path)
-        print(f"{arm:10s} {len(v):>7d} {st.mean(v):>9.1f} {int(st.median(v)):>8d} {max(v):>8d}")
-
-    print("\n--- estructura por transcrito (numero de CDS = exones codificantes) ---")
-    print(f"{'brazo':10s} {'#tx':>7s} {'CDS/tx media':>13s} {'CDS/tx med':>11s} {'monoexon%':>10s}")
-    for arm, path in GFF.items():
-        cc, _, _ = parse_gff(path)
-        counts = list(cc.values())
-        if not counts:
-            print(f"{arm:10s}  (sin CDS con Parent legible)")
-            continue
-        mono = 100 * sum(1 for x in counts if x == 1) / len(counts)
-        print(f"{arm:10s} {len(counts):>7d} {st.mean(counts):>13.2f} "
-              f"{int(st.median(counts)):>11d} {mono:>9.1f}%")
-
-    print("\n--- isoformas: mRNA por gen ---")
-    print(f"{'brazo':10s} {'#genes':>7s} {'mRNA/gen':>9s}")
-    for arm, path in GFF.items():
-        _, _, mg = parse_gff(path)
-        if not mg:
-            print(f"{arm:10s}  (sin jerarquia gene -> mRNA; esperable en miniprot)")
-            continue
-        total = sum(len(v) for v in mg.values())
-        print(f"{arm:10s} {len(mg):>7d} {total / len(mg):>9.2f}")
-
-
-if __name__ == "__main__":
-    main()
+print(f"{'brazo':10s} {'#prot':>7s} {'#mRNA':>7s} {'longMed':>8s} "
+      f"{'CDS/mRNA':>9s} {'mono CDS':>10s} {'mono exon':>11s}")
+for a in ARMS:
+    L = prot_lengths(FAA[a])
+    cds, exon, n_mrna = parse_gff(GFF[a])
+    cv = list(cds.values())
+    mono_cds = 100 * sum(1 for x in cv if x == 1) / len(cv) if cv else 0
+    ev = list(exon.values())
+    mono_ex = 100 * sum(1 for x in ev if x == 1) / len(ev) if ev else float("nan")
+    ex_txt = f"{mono_ex:9.1f}%" if ev else "      n/d"
+    print(f"{a:10s} {len(L):>7d} {n_mrna:>7d} {st.mean(L):>8.1f} "
+          f"{st.mean(cv):>9.2f} {mono_cds:>9.1f}% {ex_txt}")
