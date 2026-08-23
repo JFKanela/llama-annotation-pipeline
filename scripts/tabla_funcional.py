@@ -2,15 +2,24 @@
 """Tabla 2: anotacion funcional por brazo (InterProScan 5.78-109.0).
 
 Sustituye a la figura 5 del plan, que discriminaba poco: los cuatro brazos
-quedan entre 86.6 % y 90.2 % de cobertura Pfam.
+quedan en un margen estrecho de cobertura Pfam, de unos cuatro puntos.
+
+LAS CIFRAS NO SE ESCRIBEN AQUI. Todas las que salen en la tabla se calculan en
+tiempo de ejecucion a partir de ips_out/ y de md5_to_ids.tsv. La version que
+consta en el manuscrito es la de Tabla2_funcional.md; esta cabecera no la
+duplica, precisamente para que no puedan divergir. (En la ronda 8 se comprobaron
+una a una contra la tabla generada y coincidian; el problema era que estuvieran
+escritas a mano, no que estuvieran mal.)
 
 "Con dominio" excluye MobiDBLite y Coils, que son prediccion de desorden y de
 estructura enrollada y anotan casi cualquier proteina.
 
 CAUTELA que debe constar al presentarla: los denominadores NO son equivalentes.
-Helixer predice 18765 proteinas frente a 20000-21000 de los demas, y solo emite
-modelos donde consigue construir un ORF completo, de modo que su conjunto esta
-preseleccionado por plausibilidad estructural y su porcentaje parte con ventaja.
+Helixer predice bastantes menos proteinas que los brazos de homologia, y solo
+emite modelos donde consigue construir un ORF completo, de modo que su conjunto
+esta preseleccionado por plausibilidad estructural y su porcentaje parte con
+ventaja. La columna que se compara entre brazos es el recuento, no el ratio,
+salvo que esa asimetria se declare al lado.
 """
 import glob, os
 from collections import defaultdict

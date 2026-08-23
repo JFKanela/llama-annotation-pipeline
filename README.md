@@ -17,16 +17,34 @@ excluded via `.gitignore`.
 The annotation sets and proteomes produced with this workflow are deposited
 separately:
 
-**DOI: [10.5281/zenodo.21445840](https://doi.org/10.5281/zenodo.21445840)** (CC0-1.0)
+- **Concept DOI**, always resolving to the latest version:
+  [10.5281/zenodo.21445839](https://doi.org/10.5281/zenodo.21445839)
+- **Version 1.1.0** (23 August 2026), the one described here:
+  [10.5281/zenodo.22072343](https://doi.org/10.5281/zenodo.22072343) (CC0-1.0)
 
-The deposit contains the four annotations (GFF3), the four derived proteomes
-(FASTA), and the quality-control output for six protein sets: the four produced
-here, the *Vicugna pacos* reference proteome as a ceiling, and a previous
-unpublished in-house annotation as a baseline.
+Version 1.1.0 supersedes version 1.0.0
+([10.5281/zenodo.21445840](https://doi.org/10.5281/zenodo.21445840)), which held
+four proteomes and no combined set. **The deposit is open; the earlier embargo no
+longer applies.**
 
-The files are under embargo until the associated manuscript is published; the
-record metadata, including the full description of contents and caveats, is
-publicly visible in the meantime.
+Contents of version 1.1.0:
+
+- the four annotations (GFF3) and the four derived proteomes (FASTA);
+- **`llama_combined_reference_proteome.faa.gz`** — the combined reference
+  proteome of 20,708 proteins described below, which is the recommended resource;
+- `qc.tar.gz` — quality-control output for six protein sets: the four produced
+  here, the *Vicugna pacos* reference proteome as a ceiling, and a previous
+  unpublished in-house annotation as a baseline;
+- `analysis.tar.gz` — the derived tables of the downstream analyses;
+- `CHECKSUMS.sha256`.
+
+> **A caveat about Zenodo DOIs.** A Zenodo record carries a *concept* DOI, which
+> always resolves to the latest version, and one *version* DOI per deposited
+> version. The concept DOI becomes visible in the interface only once a second
+> version exists, which is how it is easy to mistake one for the other:
+> `10.5281/zenodo.21445840` was taken for a while to be the concept DOI of the
+> data record and is in fact the version DOI of 1.0.0. The concept DOI is
+> `10.5281/zenodo.21445839`. Both were checked by resolution.
 
 Note that code and data are deposited as **separate records with different
 licences**: MIT for this workflow, CC0-1.0 for the data. This is deliberate.
@@ -176,6 +194,10 @@ Full parameters and provenance are in
   proteome, with an optional secondary lineage.
 - **AGAT** structural statistics per annotation.
 - **gffcompare** concordance between Branch A and Branch B.
+- **InterProScan** 5.78-109.0 — functional annotation of the four proteomes; see
+  the section below. Not automated in the `Snakefile`.
+- **DIAMOND** 2.2.4 — alignment against two external reference proteomes as a
+  measure of model accuracy; see the section below. Not automated either.
 - A comparative report (`results/report/comparison_report.md` +
   `comparison_table.tsv`).
 
@@ -267,10 +289,13 @@ Results against *C. dromedarius*:
 | lifton | 19,277 | 95.3 | 95.5 | 84.2 | 92.6 |
 | helixer | 17,945 | 95.6 | 92.6 | 81.7 | 91.4 |
 
-> **The reference chosen decides the conclusion.** Measured against alpaca,
-> Helixer appears to over-extend its models twenty times more often than LiftOn
-> (2.0 % versus 0.0 %). Measured against dromedary, all four branches sit at the
-> same 2 % and are indistinguishable.
+> **The reference chosen decides the conclusion.** Over-extension here is the
+> criterion applied by `scripts/analyze_blastp.py`: subject coverage exceeding
+> query coverage by more than 20 points. Measured against alpaca, Helixer meets
+> it in **364 of 18,016** aligned proteins (**2.0 %**) against **7 of 19,726**
+> for LiftOn (**0.04 %**, which prints as 0.0 % at one decimal) — **more than
+> fifty times as often**. Measured against dromedary, the four branches fall
+> between **1.7 % and 2.2 %** and are indistinguishable.
 >
 > The cause is circularity. Three of the four branches are projections of the
 > alpaca annotation and align almost perfectly against their own source, so their
@@ -302,30 +327,41 @@ The question this section answers is how many of those Helixer-only loci are rea
 genes and how many are prediction artefacts — because the honest answer to that
 is what makes the rest of the resource credible.
 
-Of the Helixer transcripts with **no positional overlap** with any homology
-model, **790 loci exceed 1 kb**. Cross-referencing them against the DIAMOND
-alignments already computed for section "Model accuracy":
+Two counts precede the analysis below and they are **not interchangeable**.
+`scripts/overlap_coords.py` merges overlapping intervals before comparing and
+reports **828 novel loci**; `scripts/novel_loci_blast.py` evaluates **each mRNA
+separately**, because it needs the correspondence with a protein, and reports
+**891 transcripts** with no overlap. The first counts loci, the second counts
+transcripts, and it is correct that they differ. Both figures come from the
+run-time output of their own scripts; neither is recomputed here.
+
+Of those transcripts, **790 exceed 1 kb** and carry a usable sequence mapping.
+Cross-referencing them against the DIAMOND alignments already computed for
+section "Model accuracy". The table below says "loci", which is the term used
+throughout this section and in the manuscript; the unit counted is strictly one
+row per mRNA:
 
 | | Loci | % |
 |---|---|---|
 | Total, > 1 kb, no positional overlap | 790 | 100 |
-| **With an orthologue in another camelid** | **545** | **69.0** |
-| Without a camelid orthologue | 245 | 31.0 |
+| **With an orthologue in another camelid** | **555** | **70.3** |
+| Without a camelid orthologue | 235 | 29.7 |
 | — of those, with a Swiss-Prot homologue | 10 | 1.3 |
-| — of those, with no homologue anywhere | ~235 | 29.7 |
+| — of those, with no homologue anywhere | 225 | 28.5 |
 
 Read plainly:
 
-- **545 loci (69.0 %) are real genes that homology transfer failed to place.**
+- **555 loci (70.3 %) are real genes that homology transfer failed to place.**
   They have an orthologue in another camelid, so their existence does not depend
   on trusting the *ab initio* predictor. This is the substantive gain of running
-  a reference-independent method alongside the projections.
-- **~235 loci have no homologue in any camelid and none in Swiss-Prot.** With
+  a reference-independent method alongside the projections, and these are the
+  loci added to the combined reference proteome described below.
+- **225 loci have no homologue in any camelid and none in Swiss-Prot.** With
   two independent searches returning nothing, the most probable explanation is
   that they are **false positives of the prediction**, not lineage-specific
   genes. They are reported as such.
 
-Only **10** of the 245 orphans matched Swiss-Prot, which is what makes the
+Only **10** of the 235 orphans matched Swiss-Prot, which is what makes the
 false-positive reading hard to avoid: a genuinely novel protein-coding gene in a
 camelid would be unlikely to have no detectable homologue in either a sister
 species or a manually curated reference database.
@@ -342,7 +378,52 @@ Two caveats belong with these numbers:
   were excluded because below that length the prediction is dominated by
   fragments; a different threshold gives a different denominator.
 
-The commands are in [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md), section 8.
+The commands are in [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md), section 8. The
+Swiss-Prot search itself is wrapped in `scripts/run_swissprot.sh`.
+
+## The combined reference proteome
+
+The four annotations are a comparison. The **product** of this work is a single
+protein set fit for downstream use, built from the two branches that each
+contribute something the other cannot.
+
+| Component | Proteins |
+|---|---|
+| LiftOn core | 20,233 |
+| **+** Helixer loci with a camelid orthologue and no positional overlap | + 555 |
+| **-** of those, redundant with the core at >= 95 % identity and >= 80 % coverage | - 80 |
+| **Combined reference proteome** | **20,708** |
+
+The file is `llama_combined_reference_proteome.faa.gz` in the data deposit
+(version 1.1.0, DOI
+[10.5281/zenodo.22072343](https://doi.org/10.5281/zenodo.22072343)); its working
+name during the analysis was `Lgla_combined_reference_proteome_v1.faa`. Counted
+on the deposited file, it holds **20,233 identifiers of LiftOn origin and 475 of
+Helixer origin**, which is the same 20,708 read the other way round: 555 - 80 =
+475.
+
+**LiftOn is the core because it is the best-modelled homology branch, not because
+it is the most complete.** Against the external reference it has the highest
+fraction of proteins whose alignment covers at least 80 % of the query (92.6 %,
+against 89.8 %, 88.7 % and 91.4 %), and it carries the fewest internal stop
+codons of the three homology branches (2.7 %, against 12.0 % and 8.8 %). The 555
+added loci are the substantive gain of running a reference-independent predictor
+alongside the projections: genes with an orthologue in another camelid that the
+transfer did not place.
+
+**Recommendation for use.** Use the combined proteome for general purposes. Use
+the LiftOn proteome alone only when a set strictly derived from the *Vicugna
+pacos* reference annotation is required — for instance when an analysis assumes
+one-to-one correspondence with the reference annotation.
+
+> **Provenance caveat.** The construction is documented in
+> [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md), section 8.4, and wrapped in
+> `scripts/build_combined_proteome.sh`. **That script is a reconstruction written
+> after the fact, not a transcript of the commands that produced the deposited
+> file**, and it has not been re-executed against the original inputs. Treat it,
+> like the Swiss-Prot search, as the least well-documented step of the pipeline.
+> The deposited file is the authoritative artefact; the script is the best
+> available account of how it was made.
 
 ## Figures and tables
 
@@ -398,6 +479,8 @@ only. See `REPRODUCIBILITY.md` section 9 for the environment and for why
 │   ├── analyze_blastp.py      # coverage analysis and per-branch assignment
 │   ├── estado_blastp.sh       # DIAMOND progress monitor
 │   ├── novel_loci_blast.py    # characterises Helixer loci with no positional overlap
+│   ├── run_swissprot.sh       # Swiss-Prot search of the orphan loci (RECONSTRUCTED)
+│   ├── build_combined_proteome.sh  # combined reference proteome (RECONSTRUCTED; see REPRODUCIBILITY sec. 8.4)
 │   ├── fig1_busco.py          # Figure 1 — BUSCO completeness
 │   ├── fig2_upset.py          # Figure 2 — proteome overlap (UpSet, matplotlib only)
 │   ├── fig3_estructura.py     # Figure 3 — coding exons per transcript, single-exon fraction
@@ -456,9 +539,16 @@ If you use this workflow, please cite it via the metadata in
   [10.5281/zenodo.21456816](https://doi.org/10.5281/zenodo.21456816)
 - Version 1.0.0:
   [10.5281/zenodo.21456817](https://doi.org/10.5281/zenodo.21456817)
+- Later versions: Zenodo mints a version DOI when each release is archived, and
+  lists them all in the *Versions* panel of the record.
 
 Cite the version DOI when referring to the exact state of the code used for a
 given analysis, and the concept DOI otherwise.
+
+Unlike the data record, whose concept and version DOIs were confused for a while
+(see [Data](#data)), this record's DOIs are what they appear to be:
+`10.5281/zenodo.21456816` is the concept DOI and `10.5281/zenodo.21456817` the
+version DOI of 1.0.0. Both were checked by resolution.
 
 ## License
 

@@ -45,11 +45,26 @@ añadieron después del workflow y se ejecutaron manualmente, de ahí estos dos 
 | Script | Salida | Dónde va en el artículo |
 |---|---|---|
 | `overlap_md5.py` | 42.364 únicas de 80.331; 14 intersecciones | Figura UpSet de solapamiento. Redundancia interna de miniprot |
-| `overlap_coords.py` | 828 loci novel, 3.477 perdidos | La afirmación de novedad posicional de Helixer |
+| `overlap_coords.py` | 828 **loci** novel (intervalos fusionados), 3.477 perdidos | La afirmación de novedad posicional de Helixer |
 | `structural_stats.py` | Longitud, CDS/transcrito, monoexónicos | Eje de calidad independiente de BUSCO |
-| `novel_loci_blast.py` | 790 loci >1 kb sin solape; 545 con ortólogo camélido | La caracterización de la novedad posicional de Helixer |
+| `novel_loci_blast.py` | 891 **transcritos** sin solape, 790 de >1 kb; de esos, **555** con ortólogo camélido y 235 sin él | La caracterización de la novedad posicional de Helixer, y los 555 que entran en el proteoma combinado |
 | `internal_stops.py` | 12,0 % / 8,8 % / 2,7 % / 0 % | Justifica LiftOn como proteoma de referencia |
 | `camelidae_landscape.py` | `camelidae.json` y tabla | Evidencia de la afirmación central. Especies para OrthoFinder |
+
+> **828 Y 891 NO SE CONTRADICEN: CUENTAN COSAS DISTINTAS.** `overlap_coords.py`
+> fusiona los intervalos solapados antes de comparar, de modo que dos mRNA superpuestos
+> son **un locus**. `novel_loci_blast.py` evalúa **cada mRNA por separado**, porque
+> necesita la correspondencia con una proteína. Loci frente a transcritos. Ninguna de
+> las dos cifras se recalculó en la ronda 8: ambas proceden de la salida en ejecución de
+> su propio script. La que sí se verificó contando sobre los ficheros es la de 790 y su
+> desglose 555 / 235 / 10 / 225.
+
+> **CORRECCIÓN DE LA RONDA 8.** Hasta el commit `06eb6be` aquí, en el `README.md` de la
+> raíz y en `REPRODUCIBILITY.md` §8.3 se publicaba **545 con ortólogo y 245 sin él**.
+> Es incorrecto. El recuento sobre `helixer_novel_loci.tsv` da **555 y 235**, y solo con
+> 555 cuadra el proteoma combinado: 20.233 + 555 − 80 = 20.708, que son las proteínas
+> que efectivamente tiene el fichero depositado. El error pasó tres rondas porque
+> 545+245 también suma 790.
 
 Son independientes entre sí y pueden correrse en cualquier orden, siempre que existan
 los cuatro proteomas y sus GFF3. `novel_loci_blast.py` es la excepción: necesita que
@@ -78,6 +93,7 @@ lo que después se alineó manualmente contra Swiss-Prot.
 | `run_blastp.sh` | Alinea las secuencias únicas contra dos proteomas de referencia con DIAMOND, con reanudación por pasos |
 | `analyze_blastp.py` | Calcula cobertura de consulta y de sujeto por brazo, y reparte los resultados con `md5_to_ids.tsv` |
 | `estado_blastp.sh` | Monitorización del progreso |
+| `run_swissprot.sh` | Alinea contra Swiss-Prot los loci huérfanos que escribe `novel_loci_blast.py`. **Reconstruido a posteriori en la ronda 8**, ver aviso |
 
 Cuarto criterio de calidad de Kourelis et al. 2019, y el único de todo el trabajo que
 evalúa **exactitud del modelo** en lugar de completitud o consistencia interna.
@@ -88,10 +104,16 @@ evalúa **exactitud del modelo** en lugar de completitud o consistencia interna.
 > un control **circular**: tres de los cuatro brazos son proyecciones de esa anotación y
 > alinean casi perfectamente contra su propia fuente.
 >
-> La diferencia no es teórica. Contra alpaca, Helixer parece sobre-extender sus modelos
-> veinte veces más que LiftOn (2,0 % frente a 0,0 %). Contra dromedario, los cuatro
-> brazos están en el mismo 2 % y son indistinguibles. **Usar alpaca como patrón habría
+> La diferencia no es teórica. El criterio de sobre-extensión es el de
+> `analyze_blastp.py`: cobertura de sujeto por encima de la de consulta en más de 20
+> puntos. Contra alpaca, Helixer lo cumple en **364 de 18.016** proteínas alineadas
+> (**2,0 %**) frente a **7 de 19.726** de LiftOn (**0,04 %**, que se imprime como 0,0 %
+> a un decimal): **más de cincuenta veces**. Contra dromedario los cuatro brazos quedan
+> entre **1,7 % y 2,2 %** y son indistinguibles. **Usar alpaca como patrón habría
 > producido una conclusión falsa en el manuscrito.**
+>
+> *(Hasta la ronda 8 aquí ponía «veinte veces». La proporción real es de unas 57. Las
+> dos cifras porcentuales sí eran correctas; el multiplicador no.)*
 
 > **NO REPORTAR LAS MEDIANAS DE COBERTURA.** Dan 100 % en los cuatro brazos y en ambas
 > referencias: saturan y no discriminan. Usar las fracciones con cobertura ≥80 %.
@@ -190,24 +212,60 @@ Dependencias externas: solo **matplotlib** (las cuatro figuras) y **numpy**
 > **`upsetplot` NO se usa.** No es compatible con las versiones actuales de pandas y
 > matplotlib. `fig2_upset.py` dibuja el diagrama con matplotlib puro.
 
-> **Tres cosas que conviene saber antes de ejecutarlas.**
+> **Los tres defectos que arrastraba esta carpeta, resueltos en la ronda 8.**
 >
-> - `fig3_estructura.py` **anuncia tres paneles en su docstring y dibuja dos**: la
->   longitud proteica se calcula y se imprime por consola, pero no se representa.
->   Hay que decidir si se añade el panel o se corrige el docstring.
-> - `tabla1_final.py` localiza las secciones de la salida de `build_report.py` por
->   texto exacto del encabezado, sin `try`. Si cambia un título en `build_report.py`,
->   revienta con `ValueError`.
-> - `tabla_funcional.py` lleva **cifras codificadas en su docstring** (86,6 %, 90,2 %,
->   18.765). Están escritas a mano, no calculadas: hay que contrastarlas con la
->   ejecución antes de publicar.
+> - `fig3_estructura.py` anunciaba tres paneles y dibujaba dos. **Corregido el
+>   docstring, no añadido el panel**: la longitud proteica se retiró a propósito porque
+>   en escala logarítmica la diferencia entre 524 y 551 aminoácidos no se distingue. Se
+>   sigue calculando e imprimiendo por consola. De paso, los dos paneles llevaban ambos
+>   el comentario `# B.` en el código.
+> - `tabla1_final.py` localizaba las secciones por texto exacto sin `try` y reventaba
+>   con un `ValueError` pelado. **Sigue localizándolas por texto exacto** —es frágil por
+>   diseño y no hay forma barata de evitarlo— pero ahora comprueba que existan los dos
+>   ficheros de entrada y aborta con un mensaje que dice qué encabezado no encuentra y
+>   dónde hay que tocarlo.
+> - `tabla_funcional.py` llevaba 86,6 %, 90,2 % y 18.765 escritos a mano en el
+>   docstring. **Se contrastaron contra `Tabla2_funcional.md` y eran correctos**; el
+>   problema era que estuvieran escritos a mano y pudieran divergir. Se han sustituido
+>   por una remisión a la tabla generada.
+
+## 7. El proteoma combinado
+
+| Script | Papel |
+|---|---|
+| `build_combined_proteome.sh` | Ensambla el proteoma de referencia combinado: núcleo LiftOn + loci de Helixer rescatados − redundantes |
+
+```
+20.233 (núcleo LiftOn)  +  555 (rescatados)  −  80 (redundantes)  =  20.708
+```
+
+Es el **producto** del trabajo, no una de las cuatro anotaciones que se comparan. Se
+deposita como `llama_combined_reference_proteome.faa.gz` en el registro de datos 1.1.0
+(DOI 10.5281/zenodo.22072343). Contado sobre el fichero depositado: 20.233
+identificadores de origen LiftOn y 475 de origen Helixer, que es el mismo 20.708 leído
+al revés.
+
+**Por qué LiftOn es el núcleo.** No por ser el más completo, sino por ser el brazo de
+homología mejor modelado: la mayor fracción de proteínas que cubren ≥80 % de la consulta
+contra la referencia externa (92,6 %) y los menos stops internos de los tres brazos de
+homología (2,7 %).
+
+> **AVISO DE PROCEDENCIA, PARA LOS DOS SCRIPTS RECONSTRUIDOS.** `run_swissprot.sh` y
+> `build_combined_proteome.sh` se escribieron en la ronda 8 **después** de las
+> ejecuciones que documentan, reconstruyendo los comandos a partir del registro de
+> trabajo. No son transcripciones de scripts ejecutados y **no se han vuelto a correr
+> contra las entradas originales**. Lo que sí está verificado es el resultado: el
+> fichero depositado tiene 20.708 proteínas con la composición declarada. Son las dos
+> lagunas de trazabilidad abiertas del pipeline; el resto de comandos de
+> `REPRODUCIBILITY.md` sí proceden de scripts ejecutados.
 
 ## Rutas
 
 Los scripts de análisis esperan encontrar en el directorio de trabajo:
 
 - `llama_liftoff.{faa.gz,gff3.gz}`, `llama_miniprot.*`, `llama_lifton.*`
-  (del depósito de datos, DOI 10.5281/zenodo.21445840)
+  (del depósito de datos, versión 1.1.0, DOI 10.5281/zenodo.22072343; DOI de concepto
+  10.5281/zenodo.21445839. La 1.0.0, DOI 10.5281/zenodo.21445840, ya no es la vigente)
 - `Lgla_hx036_helixer.faa` y `Lgla_hx036_helixer_FINAL.gff`
   (web tool de Helixer v0.3.6, con overlap)
 
@@ -225,8 +283,8 @@ tres brazos de homología son comparables entre sí.
 
 **Las proteínas más largas de Helixer NO son sobre-extensión.** Fue una duda abierta
 durante un tiempo y la resolvió el análisis de la sección 3. Medido contra *V. pacos*,
-Helixer parecería sobre-extender veinte veces más que LiftOn, pero es un artefacto de la
-circularidad: los brazos de homología alinean contra su propia fuente. Medido contra
-*C. dromedarius*, que es el patrón externo, los cuatro brazos son indistinguibles. La
-explicación de la mayor longitud media es la preselección: Helixer solo emite modelos
-donde consigue construir un ORF completo.
+Helixer parecería sobre-extender más de cincuenta veces lo que LiftOn, pero es un
+artefacto de la circularidad: los brazos de homología alinean contra su propia fuente.
+Medido contra *C. dromedarius*, que es el patrón externo, los cuatro quedan entre 1,7 %
+y 2,2 % y son indistinguibles. La explicación de la mayor longitud media es la
+preselección: Helixer solo emite modelos donde consigue construir un ORF completo.

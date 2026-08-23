@@ -35,6 +35,8 @@ suspect.
 | Functional annotation (InterProScan) | **No** | Manual, section 6 |
 | Model accuracy against external references (DIAMOND) | **No** | Manual, section 7 |
 | Positional novelty of the *ab initio* branch | **No** | Manual, section 8 |
+| Swiss-Prot search of the orphan loci | **No** | `scripts/run_swissprot.sh`, section 8.2 |
+| Combined reference proteome | **No** | `scripts/build_combined_proteome.sh`, section 8.4 |
 | Manuscript figures and tables | **No** | Manual, section 9 |
 
 `scripts/build_report.py` discovers the methods by scanning `results/busco/`, so
@@ -693,9 +695,19 @@ The figures against *C. dromedarius* are in the `README.md`. The result worth
 recording here is not any single number but the effect of the choice of
 reference:
 
-> Measured against alpaca, Helixer appears to over-extend its models twenty times
-> more often than LiftOn (2.0 % versus 0.0 %). Measured against dromedary, all
-> four branches sit at the same 2 % and are indistinguishable.
+> Over-extension is the criterion applied by `analyze_blastp.py`: subject
+> coverage exceeding query coverage by more than 20 points. Measured against
+> alpaca, Helixer meets it in **364 of 18,016** aligned proteins (**2.0 %**),
+> against **7 of 19,726** for LiftOn (**0.04 %**, printed as 0.0 % at one
+> decimal) — **more than fifty times as often**. Measured against dromedary the
+> four branches fall between **1.7 % and 2.2 %** and are indistinguishable.
+>
+> | Branch | Over-extended vs alpaca | Over-extended vs dromedary |
+> |---|---|---|
+> | liftoff | 16 / 18,897 (0.08 %) | 335 / 18,423 (1.82 %) |
+> | miniprot | 31 / 21,113 (0.15 %) | 422 / 20,519 (2.06 %) |
+> | lifton | 7 / 19,726 (0.04 %) | 322 / 19,277 (1.67 %) |
+> | helixer | 364 / 18,016 (2.02 %) | 386 / 17,945 (2.15 %) |
 >
 > Three of the four branches are projections of the alpaca annotation. They align
 > almost perfectly against their own source, so their 0.0 % measures identity
@@ -776,26 +788,29 @@ diamond blastp \
   --threads 4
 ```
 
-**Provenance caveat.** This step is *not* captured by any script in the
-repository, unlike every other command in this document. The parameters above
-mirror those of section 7.3, which is what the run used, but they are a
-reconstruction from the working record rather than a transcript of an executed
-script. Anyone reproducing this should treat the Swiss-Prot search as the least
-well-documented step of the whole pipeline.
+**Provenance caveat.** The commands above are now wrapped in
+`scripts/run_swissprot.sh`, but that script was **written after the fact**: it is
+a reconstruction from the working record, not a transcript of an executed script,
+and it has not been re-run against the original inputs. Its parameters mirror
+those of section 7.3, which is what the run used. Anyone reproducing this should
+treat the Swiss-Prot search, together with the combined-proteome construction of
+section 8.4, as the two least well-documented steps of the pipeline.
 
 ### 8.3. Result
 
 | | Loci | % |
 |---|---|---|
 | Helixer transcripts > 1 kb with no positional overlap | 790 | 100 |
-| **With an orthologue in another camelid** | **545** | **69.0** |
-| Without a camelid orthologue | 245 | 31.0 |
+| **With an orthologue in another camelid** | **555** | **70.3** |
+| Without a camelid orthologue | 235 | 29.7 |
 | — with a Swiss-Prot homologue | 10 | 1.3 |
-| — with no homologue anywhere | ~235 | 29.7 |
+| — with no homologue anywhere | 225 | 28.5 |
 
-545 loci are real genes that homology transfer failed to place; roughly 235 are,
+555 loci are real genes that homology transfer failed to place; the remaining 225
+are,
 on the balance of evidence, **false positives of the prediction** and are
-reported as such. Two independent searches — a sister camelid and a manually
+reported as such. The 555 recovered loci are the ones carried into the combined
+reference proteome of section 8.4. Two independent searches — a sister camelid and a manually
 curated database — returning nothing is hard to reconcile with a genuinely novel
 protein-coding gene.
 
@@ -803,6 +818,81 @@ Positional novelty is not sequence novelty: `scripts/overlap_md5.py` measures
 exact sequence identity and yields counts an order of magnitude larger. The two
 must not be conflated. The 1 kb threshold is a methodological choice and changes
 the denominator.
+
+---
+
+### 8.4. Construction of the combined reference proteome
+
+The combined reference proteome is the product of this work: the LiftOn core
+extended with the Helixer loci that homology transfer failed to place. It is
+deposited as `llama_combined_reference_proteome.faa.gz` in the data record,
+version 1.1.0 (DOI 10.5281/zenodo.22072343).
+
+| Component | Proteins |
+|---|---|
+| LiftOn core | 20,233 |
+| **+** loci from section 8.3 with a camelid orthologue | + 555 |
+| **-** of those, redundant with the core (>= 95 % identity, >= 80 % coverage) | - 80 |
+| **Total** | **20,708** |
+
+Verified by direct counting on the deposited file: 20,233 identifiers of LiftOn
+origin and 475 of Helixer origin, and 555 - 80 = 475.
+
+> **PROVENANCE — read before reusing.** Unlike every other section of this
+> document, the commands below were **not** transcribed from an executed script.
+> They are a reconstruction, written after the fact, of how the deposited file was
+> built, and they have **not been re-executed against the original inputs**.
+> `scripts/build_combined_proteome.sh` wraps them and carries the same warning in
+> its header. The deposited FASTA is the authoritative artefact; this section is
+> the best available account of its construction. Anyone who needs a
+> bit-for-bit-reproducible build should regard this, together with the Swiss-Prot
+> search of section 8.2, as an open gap in the pipeline.
+
+```bash
+# 1. the 555 rescued loci: those of helixer_novel_loci.tsv with a camelid hit
+awk -F'\t' 'NR>1 && ($7=="si" || $8=="si") {print $1}' \
+    blastp/helixer_novel_loci.tsv > blastp/rescued_ids.txt
+wc -l < blastp/rescued_ids.txt                 # 555
+
+# 2. their sequences, out of the Helixer proteome
+seqkit grep -f blastp/rescued_ids.txt Lgla_hx036_helixer.faa \
+    > blastp/rescued.faa
+
+# 3. redundancy against the LiftOn core
+diamond makedb --in results/proteomes/llama_lifton_v2.faa \
+               -d blastp/lifton_core --threads 4
+diamond blastp \
+  -q blastp/rescued.faa \
+  -d blastp/lifton_core \
+  -o blastp/rescued_vs_core.tsv \
+  --outfmt 6 qseqid sseqid pident length qstart qend sstart send \
+              evalue bitscore qlen slen \
+  --very-sensitive --max-target-seqs 1 --max-hsps 1 --evalue 1e-5 --threads 4
+
+# 4. drop the redundant ones: >= 95 % identity AND >= 80 % query coverage
+awk -F'\t' '$3 >= 95 && (100*($6-$5+1)/$11) >= 80 {print $1}' \
+    blastp/rescued_vs_core.tsv | sort -u > blastp/redundant_ids.txt
+wc -l < blastp/redundant_ids.txt               # 80
+
+# 5. the combined proteome
+grep -v -F -f blastp/redundant_ids.txt blastp/rescued_ids.txt \
+    > blastp/added_ids.txt                     # 475
+seqkit grep -f blastp/added_ids.txt Lgla_hx036_helixer.faa > blastp/added.faa
+cat results/proteomes/llama_lifton_v2.faa blastp/added.faa \
+    > Lgla_combined_reference_proteome_v1.faa
+grep -c '^>' Lgla_combined_reference_proteome_v1.faa    # 20708
+```
+
+**Why LiftOn is the core.** Not because it is the most complete, but because it
+is the best-modelled homology branch: against the external reference it has the
+highest fraction of proteins covering at least 80 % of the query (92.6 %, against
+89.8 %, 88.7 % and 91.4 %, section 7), and the fewest internal stop codons of the
+three homology branches (2.7 %, against 12.0 % and 8.8 %,
+`scripts/internal_stops.py`).
+
+**Recommended use.** The combined proteome for general purposes; the LiftOn
+proteome alone only when a set strictly derived from the *Vicugna pacos*
+reference annotation is required.
 
 ---
 

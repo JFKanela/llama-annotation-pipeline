@@ -4,10 +4,10 @@
   "upload_type": "software",
   "access_right": "open",
   "license": "mit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "related_identifiers": [
     {
-      "identifier": "10.5281/zenodo.21445840",
+      "identifier": "10.5281/zenodo.22072343",
       "relation": "isSupplementTo",
       "scheme": "doi"
     },
@@ -19,9 +19,19 @@
   ],
   "creators": [
     {
-      "name": "Priego Cubero, Juan Francisco",
+      "name": "Priego-Cubero, Juan Francisco",
       "orcid": "0009-0004-2103-6835",
       "affiliation": "Universidad de Castilla-La Mancha (UCLM)"
+    },
+    {
+      "name": "Rodríguez-Borges, Víctor Manuel",
+      "orcid": "0009-0004-2444-3671",
+      "affiliation": "Instituto de Productos Naturales y Agrobiología"
+    },
+    {
+      "name": "Pérez de la Lastra, José Manuel",
+      "orcid": "0000-0003-4663-5565",
+      "affiliation": "Instituto de Productos Naturales y Agrobiología"
     }
   ],
   "keywords": [

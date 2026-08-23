@@ -2,7 +2,13 @@
 """Figura 3. Propiedades estructurales de los modelos de cada brazo.
 
 Datos: los cuatro proteomas y sus GFF3.
-Paneles: A longitud proteica, B numero de CDS por transcrito, C monoexonicos.
+Paneles: A numero de CDS por transcrito, B fraccion de monoexonicos. SON DOS.
+
+NO HAY PANEL DE LONGITUD PROTEICA, y no es un olvido. Se calculo, se dibujo y se
+retiro: en escala logaritmica la diferencia entre 524 y 551 aminoacidos no se
+distingue, y en escala lineal la cola de valores extremos aplasta el resto. La
+longitud media se sigue calculando y se imprime por consola, que es donde resulta
+util; quien la necesite la tiene ahi y en structural_stats.py.
 
 QUE DEBE VERSE: Helixer produce modelos mas largos, con mas exones codificantes y
 la mitad de monoexonicos. Los genes monoexonicos suelen ser predicciones incompletas
@@ -81,7 +87,7 @@ for a in ARMS:
 
 fig, axes = plt.subplots(1, 2, figsize=(6.8, 3.4))
 
-# B. CDS por transcrito
+# A. CDS por transcrito
 ax = axes[0]
 bp = ax.boxplot([C[a] for a in ARMS], patch_artist=True, showfliers=False, whis=(5, 95),
                 widths=0.55, medianprops=dict(color="black", lw=1.3))

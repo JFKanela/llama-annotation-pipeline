@@ -6,11 +6,20 @@ Panel A: fraccion de proteinas con cobertura >=80 %, de sujeto y de consulta,
          ninguno de los cuatro brazos deriva de el.
 
 Panel B: EL PANEL IMPORTANTE. Indicio de sobre-extension medido contra las dos
-         referencias. Contra alpaca, Helixer parece sobre-extender veinte veces
-         mas que LiftOn; contra dromedario los cuatro son indistinguibles.
+         referencias. Contra alpaca, Helixer parece sobre-extender MAS DE
+         CINCUENTA VECES lo que LiftOn (2,0 % frente a 0,04 %); contra
+         dromedario los cuatro quedan entre 1,7 % y 2,2 % y son
+         indistinguibles.
          La causa es la circularidad: los tres brazos de homologia son
          proyecciones de la anotacion de alpaca y alinean contra su propia fuente.
          USAR ALPACA COMO PATRON HABRIA PRODUCIDO UNA CONCLUSION FALSA.
+
+         CUIDADO CON LAS ETIQUETAS DE ESTE PANEL. Se formatean con un decimal,
+         de modo que Liftoff, miniprot y LiftOn salen rotulados "0.0" cuando en
+         realidad valen 0,08 %, 0,15 % y 0,04 %. No son ceros. Si se regenera la
+         figura para una version futura, conviene pasar a dos decimales; no se
+         ha hecho aqui para no desincronizarla de la version ya incorporada al
+         manuscrito.
 
 NO se reportan las medianas de cobertura: dan 100 % en los cuatro brazos y en
 ambas referencias, de modo que saturan y no discriminan.

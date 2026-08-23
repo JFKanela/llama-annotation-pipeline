@@ -15,7 +15,10 @@ QUE HACE
   4. Escribe el FASTA de los que no tienen hit, listo para alinear contra Swiss-Prot.
 
 POR QUE IMPORTA
-  Sin esta separacion, la cifra de novedad posicional (828 loci) no puede interpretarse.
+  Sin esta separacion, la cifra de novedad posicional no puede interpretarse. Y esa
+  cifra depende de la unidad que se cuente: overlap_coords.py fusiona intervalos y da
+  loci, este script evalua cada mRNA y da transcritos. Ninguna de las dos se escribe
+  aqui: ambas se imprimen al ejecutar. Ver README.md, seccion de novedad posicional.
   Con ella, el manuscrito puede afirmar cuantos son fallos de transferencia recuperados
   por la prediccion ab initio, que es un resultado util y defendible, y cuantos quedan
   como candidatos genuinos, que es un resultado mas fuerte pero que exige mas evidencia.
