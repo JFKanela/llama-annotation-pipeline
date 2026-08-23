@@ -539,8 +539,11 @@ If you use this workflow, please cite it via the metadata in
   [10.5281/zenodo.21456816](https://doi.org/10.5281/zenodo.21456816)
 - Version 1.0.0:
   [10.5281/zenodo.21456817](https://doi.org/10.5281/zenodo.21456817)
-- Later versions: Zenodo mints a version DOI when each release is archived, and
-  lists them all in the *Versions* panel of the record.
+- Version 1.1.0:
+  [10.5281/zenodo.22073094](https://doi.org/10.5281/zenodo.22073094)
+
+Zenodo mints a version DOI when each release is archived, and lists them all in
+the *Versions* panel of the record.
 
 Cite the version DOI when referring to the exact state of the code used for a
 given analysis, and the concept DOI otherwise.

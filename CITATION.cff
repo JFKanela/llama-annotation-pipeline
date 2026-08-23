@@ -38,6 +38,9 @@ identifiers:
   - type: doi
     value: "10.5281/zenodo.21456817"
     description: "Version DOI of release 1.0.0"
+  - type: doi
+    value: "10.5281/zenodo.22073094"
+    description: "Version DOI of release 1.1.0"
 license: MIT
 repository-code: "https://github.com/JFKanela/llama-annotation-pipeline"
 keywords:
