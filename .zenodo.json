@@ -51,7 +51,7 @@
     },
     {
       "identifier": "10.48546/workflowhub.workflow.2250.1",
-      "relation": "isIdenticalTo",
+      "relation": "isVersionOf",
       "resource_type": "software",
       "scheme": "doi"
     },

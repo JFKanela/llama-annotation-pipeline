@@ -9,7 +9,7 @@
 #     20.233 + 555 - 80 = 20.708
 #
 #   Es el fichero depositado como llama_combined_reference_proteome.faa.gz en el
-#   registro de datos, version 1.2.0, DOI 10.5281/zenodo.22147977. Su nombre de
+#   registro de datos, version 1.3.0, DOI 10.5281/zenodo.22150587. Su nombre de
 #   trabajo durante el analisis fue Lgla_combined_reference_proteome_v1.faa.
 #
 # PROCEDENCIA Y VERIFICACION

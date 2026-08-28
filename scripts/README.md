@@ -240,8 +240,8 @@ Dependencias externas: solo **matplotlib** (las cuatro figuras) y **numpy**
 ```
 
 Es el **producto** del trabajo, no una de las cuatro anotaciones que se comparan. Se
-deposita como `llama_combined_reference_proteome.faa.gz` en el registro de datos 1.2.0
-(DOI 10.5281/zenodo.22147977). Contado sobre el fichero depositado: 20.233
+deposita como `llama_combined_reference_proteome.faa.gz` en el registro de datos 1.3.0
+(DOI 10.5281/zenodo.22150587). Contado sobre el fichero depositado: 20.233
 identificadores de origen LiftOn y 475 de origen Helixer, que es el mismo 20.708 leído
 al revés.
 
@@ -310,7 +310,7 @@ punto de una meseta, no una elección afortunada.
 Los scripts de análisis esperan encontrar en el directorio de trabajo:
 
 - `llama_liftoff.{faa.gz,gff3.gz}`, `llama_miniprot.*`, `llama_lifton.*`
-  (del depósito de datos, versión 1.2.0, DOI 10.5281/zenodo.22147977; DOI de concepto
+  (del depósito de datos, versión 1.3.0, DOI 10.5281/zenodo.22150587; DOI de concepto
   10.5281/zenodo.21445839, que resuelve siempre a la última)
 - `Lgla_hx036_helixer.faa` y `Lgla_hx036_helixer_FINAL.gff`
   (web tool de Helixer v0.3.6, con overlap)

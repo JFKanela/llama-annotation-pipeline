@@ -836,7 +836,7 @@ the denominator.
 The combined candidate reference proteome is the product of this work: the LiftOn
 core extended with the Helixer loci that homology transfer failed to place. It is
 deposited as `llama_combined_reference_proteome.faa.gz` in the data record,
-version 1.2.0 (DOI 10.5281/zenodo.22147977).
+version 1.3.0 (DOI 10.5281/zenodo.22150587).
 
 | Component | Sequences |
 |---|---|

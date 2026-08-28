@@ -27,7 +27,7 @@ downloads and pipeline outputs are produced locally and are excluded via
 The annotation sets, proteomes and analysis outputs produced with this workflow
 are deposited separately, **openly accessible**, under CC0-1.0:
 
-**Data, version 1.2.0: [10.5281/zenodo.22147977](https://doi.org/10.5281/zenodo.22147977)**
+**Data, version 1.3.0: [10.5281/zenodo.22150587](https://doi.org/10.5281/zenodo.22150587)**
 
 The deposit contains the four annotations (GFF3), the four derived proteomes and
 the combined candidate reference proteome (FASTA), the confidence-layer
