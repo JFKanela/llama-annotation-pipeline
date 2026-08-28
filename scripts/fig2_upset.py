@@ -8,6 +8,8 @@ problemas de compatibilidad con las versiones actuales de pandas y matplotlib.
 ADVERTENCIA para el pie de figura: la comparacion es por identidad EXACTA de
 secuencia. Las secuencias exclusivas de Helixer NO son genes especificos de llama.
 La novedad real por posicion genomica se trata aparte.
+
+ANCHO FIJO 170 mm (6.69 pulgadas). NO anadir bbox_inches="tight" al guardar.
 """
 import os
 from collections import defaultdict
@@ -16,10 +18,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
-MAP = os.path.expanduser("~/llama_annotation_pipeline/md5_to_ids.tsv")
-OUT = os.path.expanduser(
-    "~/Gdrive/Doctorado/llama_annotation_pipeline/MANUSCRITO/01_figuras")
+# Rutas relativas al repositorio: este script vive en scripts/
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RESULTS = os.path.join(REPO, "results")
+OUT = os.path.join(RESULTS, "figures")
 os.makedirs(OUT, exist_ok=True)
+
+MAP = os.path.join(RESULTS, "md5_to_ids.tsv")
 
 NOMBRE = {"liftoff": "Liftoff", "miniprot": "miniprot",
           "lifton": "LiftOn", "helixer": "Helixer"}
@@ -44,7 +49,7 @@ for k, v in items:
 totales = {a: sum(v for k, v in items if a in k) for a in ORDEN}
 n = len(items)
 
-fig = plt.figure(figsize=(8.2, 6.4))
+fig = plt.figure(figsize=(6.69, 5.22))
 gs = GridSpec(2, 2, width_ratios=[1, 4.2], height_ratios=[3.6, 1.15],
               hspace=0.06, wspace=0.06, figure=fig)
 
@@ -54,7 +59,7 @@ x = range(n)
 vals = [v for _, v in items]
 ax.bar(x, vals, color=AZUL, width=0.62)
 for i, v in enumerate(vals):
-    ax.text(i, v + max(vals) * 0.02, f"{v:,}".replace(",", " "),
+    ax.text(i, v + max(vals) * 0.02, f"{v:,}",
             ha="center", va="bottom", fontsize=7.2, rotation=90)
 ax.set_ylim(0, max(vals) * 1.24)
 ax.set_xlim(-0.7, n + 2.6)
@@ -95,11 +100,11 @@ MAXT = max(totales.values())
 for j, arm in enumerate(ORDEN):
     y = len(ORDEN) - 1 - j
     axt.barh(y, totales[arm], color=AZUL, height=0.62)
-    axt.text(-0.02, y, f"{totales[arm]:,}".replace(",", " "),
+    axt.text(-0.02, y, f"{totales[arm]:,}",
              transform=axt.get_yaxis_transform(),
              ha="right", va="center", fontsize=8.5)
 axt.set_xlim(MAXT * 1.02, 0)
-axt.set_xlabel("Proteins\nper set", fontsize=8.5)
+axt.set_xlabel("Sequences\nper set", fontsize=8.5)
 axt.tick_params(axis="x", labelsize=7.5)
 axt.set_yticks([])
 for s in ("top", "right", "left"):
@@ -109,5 +114,5 @@ fig.add_subplot(gs[0, 0]).axis("off")
 
 for ext in ("pdf", "png"):
     f = os.path.join(OUT, f"fig2_upset.{ext}")
-    fig.savefig(f, dpi=300, bbox_inches="tight")
+    fig.savefig(f, dpi=300)
     print("escrito:", f)

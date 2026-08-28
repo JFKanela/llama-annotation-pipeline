@@ -2,22 +2,22 @@
 """Figura 3. Propiedades estructurales de los modelos de cada brazo.
 
 Datos: los cuatro proteomas y sus GFF3.
-Paneles: A numero de CDS por transcrito, B fraccion de monoexonicos. SON DOS.
-
-NO HAY PANEL DE LONGITUD PROTEICA, y no es un olvido. Se calculo, se dibujo y se
-retiro: en escala logaritmica la diferencia entre 524 y 551 aminoacidos no se
-distingue, y en escala lineal la cola de valores extremos aplasta el resto. La
-longitud media se sigue calculando y se imprime por consola, que es donde resulta
-util; quien la necesite la tiene ahi y en structural_stats.py.
+Paneles: A numero de CDS por transcrito, B transcritos con una sola CDS.
 
 QUE DEBE VERSE: Helixer produce modelos mas largos, con mas exones codificantes y
-la mitad de monoexonicos. Los genes monoexonicos suelen ser predicciones incompletas
-o pseudogenes.
+la mitad de transcritos con una sola CDS. Un transcrito con una sola CDS puede ser
+una prediccion incompleta, un gen monoexonico real o un pseudogen: la diferencia es
+marcada pero no admite una lectura unica.
 
 EL PIE DE FIGURA DEBE REMITIR A LA FIGURA 4: esas proteinas mas largas NO son
 sobre-extension. Medido contra C. dromedarius, que es el patron externo, los cuatro
 brazos son indistinguibles. La explicacion es la preseleccion: Helixer solo emite
 modelos donde consigue construir un ORF completo.
+
+ANCHO. A diferencia de las figuras 1, 2 y 4, esta conserva bbox_inches="tight":
+con figsize=(6.8, 3.4) el recorte deja 169,8 mm, que es el ancho de pagina
+completa de la revista. Si se cambia el contenido hay que volver a medir el PDF,
+porque el recorte depende de lo que se dibuje.
 """
 import gzip, os
 import statistics as st
@@ -26,11 +26,15 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-ZEN = os.path.expanduser("~/zenodo_data")
-BASE = os.path.expanduser("~/llama_annotation_pipeline")
-OUT = os.path.expanduser(
-    "~/Gdrive/Doctorado/llama_annotation_pipeline/MANUSCRITO/01_figuras")
+# Rutas relativas al repositorio: este script vive en scripts/
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RESULTS = os.path.join(REPO, "results")
+OUT = os.path.join(RESULTS, "figures")
 os.makedirs(OUT, exist_ok=True)
+
+# Proteomas y anotaciones producidos por el flujo de trabajo
+ZEN = os.path.join(RESULTS, "proteomes")
+BASE = RESULTS
 
 ARMS = ["Liftoff", "miniprot", "LiftOn", "Helixer"]
 FAA = {"Liftoff":  os.path.join(ZEN, "llama_liftoff.faa.gz"),
@@ -87,7 +91,7 @@ for a in ARMS:
 
 fig, axes = plt.subplots(1, 2, figsize=(6.8, 3.4))
 
-# A. CDS por transcrito
+# B. CDS por transcrito
 ax = axes[0]
 bp = ax.boxplot([C[a] for a in ARMS], patch_artist=True, showfliers=False, whis=(5, 95),
                 widths=0.55, medianprops=dict(color="black", lw=1.3))

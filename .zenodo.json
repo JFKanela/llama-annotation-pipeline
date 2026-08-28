@@ -1,51 +1,83 @@
 {
   "title": "llama-annotation-pipeline: Snakemake workflow and documented commands for homology-based and ab initio annotation of the Lama glama genome",
-  "description": "Workflow, environment definitions and helper scripts used to annotate the protein-coding gene complement of a Lama glama genome assembly (GCA_028534125.1) by four strategies, and to benchmark the resulting proteomes. Three homology strategies project the Vicugna pacos reference annotation (GCF_048564905.1): DNA-to-DNA lift-over (Liftoff), protein-to-genome alignment (miniprot) and hybrid reconciliation (LiftOn). The fourth strategy is reference-independent ab initio prediction (Helixer). Proteomes are evaluated with BUSCO, with structural statistics from AGAT and concordance from gffcompare. The Snakemake workflow automates data acquisition, the Liftoff and miniprot branches and their quality control; the LiftOn and Helixer branches were run manually and on external GPU infrastructure respectively, with the exact commands documented in REPRODUCIBILITY.md. No sequence or annotation data are tracked in this repository.",
+  "description": "<p>Reproducible Snakemake workflow for the structural annotation of a chromosome-level <em>Lama glama</em> genome assembly by homology transfer and <em>ab initio</em> prediction, with evaluation against an external reference.</p><p>The workflow generates four proteome sets and a combined candidate reference proteome of 20,708 sequences, stratified into three nested confidence layers: 18,920 high-confidence models with an intact reading frame and detectable homology in an external reference, 1,313 extended-reference models failing one or both criteria, and 475 candidates from the <em>ab initio</em> prediction.</p><p>The Snakemake workflow covers Liftoff, miniprot, proteome extraction and BUSCO. LiftOn, Helixer, InterProScan and DIAMOND were run manually, with the commands documented in REPRODUCIBILITY.md.</p><p>No sequence or annotation data are tracked in this repository. The annotation sets and proteomes are deposited separately under CC0-1.0, concept DOI 10.5281/zenodo.21445839.</p>",
   "upload_type": "software",
+  "license": "MIT",
   "access_right": "open",
-  "license": "mit",
-  "version": "1.1.0",
-  "related_identifiers": [
-    {
-      "identifier": "10.5281/zenodo.22072343",
-      "relation": "isSupplementTo",
-      "scheme": "doi"
-    },
-    {
-      "identifier": "10.5281/zenodo.10836346",
-      "relation": "references",
-      "scheme": "doi"
-    }
-  ],
+  "language": "eng",
+  "version": "1.2.0",
   "creators": [
     {
       "name": "Priego-Cubero, Juan Francisco",
-      "orcid": "0009-0004-2103-6835",
-      "affiliation": "Universidad de Castilla-La Mancha (UCLM)"
+      "affiliation": "Escuela Internacional de Doctorado, Universidad de Castilla-La Mancha",
+      "orcid": "0009-0004-2103-6835"
     },
     {
       "name": "Rodríguez-Borges, Víctor Manuel",
-      "orcid": "0009-0004-2444-3671",
-      "affiliation": "Instituto de Productos Naturales y Agrobiología"
+      "affiliation": "Instituto de Productos Naturales y Agrobiología, CSIC",
+      "orcid": "0009-0004-2444-3671"
     },
     {
       "name": "Pérez de la Lastra, José Manuel",
-      "orcid": "0000-0003-4663-5565",
-      "affiliation": "Instituto de Productos Naturales y Agrobiología"
+      "affiliation": "Instituto de Productos Naturales y Agrobiología, CSIC",
+      "orcid": "0000-0003-4663-5565"
     }
   ],
   "keywords": [
     "genome annotation",
+    "structural annotation",
+    "Snakemake",
+    "homology transfer",
+    "ab initio gene prediction",
+    "proteome",
     "Lama glama",
     "Vicugna pacos",
     "Camelidae",
-    "Snakemake",
+    "reference bias",
     "Liftoff",
     "miniprot",
     "LiftOn",
     "Helixer",
     "BUSCO",
-    "liftover",
-    "comparative genomics"
+    "InterProScan",
+    "DIAMOND"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "10.5281/zenodo.21445839",
+      "relation": "isSupplementTo",
+      "resource_type": "dataset",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.48546/workflowhub.workflow.2250.1",
+      "relation": "isIdenticalTo",
+      "resource_type": "software",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_028534125.1/",
+      "relation": "references",
+      "resource_type": "dataset",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_048564905.1/",
+      "relation": "references",
+      "resource_type": "dataset",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_036321535.1/",
+      "relation": "references",
+      "resource_type": "dataset",
+      "scheme": "url"
+    },
+    {
+      "identifier": "10.5281/zenodo.10836346",
+      "relation": "references",
+      "resource_type": "dataset",
+      "scheme": "doi"
+    }
   ]
 }

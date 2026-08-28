@@ -93,7 +93,7 @@ lo que después se alineó manualmente contra Swiss-Prot.
 | `run_blastp.sh` | Alinea las secuencias únicas contra dos proteomas de referencia con DIAMOND, con reanudación por pasos |
 | `analyze_blastp.py` | Calcula cobertura de consulta y de sujeto por brazo, y reparte los resultados con `md5_to_ids.tsv` |
 | `estado_blastp.sh` | Monitorización del progreso |
-| `run_swissprot.sh` | Alinea contra Swiss-Prot los loci huérfanos que escribe `novel_loci_blast.py`. **Reconstruido a posteriori en la ronda 8**, ver aviso |
+| `run_swissprot.sh` | Alinea contra Swiss-Prot los loci huérfanos que escribe `novel_loci_blast.py`. Reconstruido a posteriori; **sus parámetros se corrigieron en la ronda 9**, ver aviso |
 
 Cuarto criterio de calidad de Kourelis et al. 2019, y el único de todo el trabajo que
 evalúa **exactitud del modelo** en lugar de completitud o consistencia interna.
@@ -229,43 +229,89 @@ Dependencias externas: solo **matplotlib** (las cuatro figuras) y **numpy**
 >   problema era que estuvieran escritos a mano y pudieran divergir. Se han sustituido
 >   por una remisión a la tabla generada.
 
-## 7. El proteoma combinado
+## 7. El proteoma candidato combinado
 
 | Script | Papel |
 |---|---|
-| `build_combined_proteome.sh` | Ensambla el proteoma de referencia combinado: núcleo LiftOn + loci de Helixer rescatados − redundantes |
+| `build_combined_proteome.sh` | Ensambla el proteoma candidato combinado: núcleo LiftOn + loci de Helixer rescatados − redundantes |
 
 ```
 20.233 (núcleo LiftOn)  +  555 (rescatados)  −  80 (redundantes)  =  20.708
 ```
 
 Es el **producto** del trabajo, no una de las cuatro anotaciones que se comparan. Se
-deposita como `llama_combined_reference_proteome.faa.gz` en el registro de datos 1.1.0
-(DOI 10.5281/zenodo.22072343). Contado sobre el fichero depositado: 20.233
+deposita como `llama_combined_reference_proteome.faa.gz` en el registro de datos 1.2.0
+(DOI 10.5281/zenodo.22147977). Contado sobre el fichero depositado: 20.233
 identificadores de origen LiftOn y 475 de origen Helixer, que es el mismo 20.708 leído
 al revés.
+
+**Secuencias, no proteínas.** El recuento se expresa en secuencias en toda la
+documentación desde la ronda 9. No son proteínas validadas: parte del núcleo arrastra
+pautas de lectura rotas, y eso es justamente lo que clasifica `capas.py`.
 
 **Por qué LiftOn es el núcleo.** No por ser el más completo, sino por ser el brazo de
 homología mejor modelado: la mayor fracción de proteínas que cubren ≥80 % de la consulta
 contra la referencia externa (92,6 %) y los menos stops internos de los tres brazos de
 homología (2,7 %).
 
-> **AVISO DE PROCEDENCIA, PARA LOS DOS SCRIPTS RECONSTRUIDOS.** `run_swissprot.sh` y
-> `build_combined_proteome.sh` se escribieron en la ronda 8 **después** de las
-> ejecuciones que documentan, reconstruyendo los comandos a partir del registro de
-> trabajo. No son transcripciones de scripts ejecutados y **no se han vuelto a correr
-> contra las entradas originales**. Lo que sí está verificado es el resultado: el
-> fichero depositado tiene 20.708 proteínas con la composición declarada. Son las dos
-> lagunas de trazabilidad abiertas del pipeline; el resto de comandos de
-> `REPRODUCIBILITY.md` sí proceden de scripts ejecutados.
+**Los 80 excluidos no son 80 duplicaciones.** `S4_modelos_excluidos.tsv` los lista:
+**76 corresponden a un solo modelo del núcleo cada uno**, y los cuatro restantes forman
+**dos pares** que apuntan al mismo modelo desde posiciones contiguas del mismo scaffold.
+Eso es un locus fragmentado en dos modelos de Helixer, no dos genes duplicando uno.
+
+> **UN PASO DEL ENSAMBLADO NO SE PUEDE SIMPLIFICAR.** DIAMOND aborta ante el carácter
+> `.` que gffread emite para un stop en pauta, de modo que la **base** se construye
+> sobre una copia saneada del núcleo con `.` sustituido por `X`, mientras que el fichero
+> de **salida** se arma sobre el proteoma **original**, con las marcas de stop intactas.
+> Sanear también la salida borraría en silencio la evidencia de pautas rotas que después
+> clasifica `capas.py`. La versión que subió la ronda 8 no hacía el saneado y **habría
+> fallado al ejecutarse**.
+
+## 8. Capas de confianza y análisis de sensibilidad
+
+| Script | Salida | Qué sostiene |
+|---|---|---|
+| `capas.py` | `Lgla_combined_proteome_confidence.tsv` | Las tres capas del proteoma combinado. Es lo que respalda el «confidence-aware» del título |
+| `s7.py` | `S7_sensibilidad_umbral.tsv` | Que el hallazgo de circularidad no depende del umbral elegido |
+| `s6.py` | `S6_correspondencia_referencia.tsv` | La asimetría de isoformas entre los brazos de homología |
+
+Capas, contadas sobre el fichero: `high_confidence` 18.920, `extended_reference` 1.313,
+`extended_candidate` 475. Suman 20.708. Ninguna entrada de la primera capa tiene stop
+interno ni le falta hit externo: el criterio se aplica sin excepción.
+
+Sensibilidad al umbral de sobre-extensión, contraste Helixer/LiftOn contra alpaca:
+**27× a 10 pp, 35× a 15, 51× a 20 y 49× a 30**. Contra dromedario, los cuatro brazos
+quedan dentro de un factor de 1,4 en los cuatro umbrales. El 20 pp del manuscrito es un
+punto de una meseta, no una elección afortunada.
+
+> **`stops.py` NO se ha incorporado.** Existe en el directorio de trabajo y hace lo
+> mismo que `internal_stops.py`, que ya está aquí y además documenta la cautela de que
+> la fila de Helixer es no informativa por construcción. Añadirlo habría creado un
+> duplicado funcional con dos nombres distintos.
+
+> **AVISO DE PROCEDENCIA DE LOS DOS SCRIPTS RECONSTRUIDOS.** `run_swissprot.sh` y
+> `build_combined_proteome.sh` se escribieron **después** de las ejecuciones que
+> documentan, a partir del registro de trabajo. No son transcripciones. La diferencia
+> entre los dos, desde la ronda 9, importa:
+>
+> - **`build_combined_proteome.sh` está verificado por su salida.** Ejecutado sobre las
+>   entradas originales reproduce el fichero depositado **byte a byte**, MD5
+>   `dc69fa820facc0f087696bdd4885e1c1`, 11.337.876 bytes, 20.708 secuencias. Su
+>   comprobación final aborta con código de error si el recuento no cuadra.
+> - **`run_swissprot.sh` no tiene esa comprobación.** Lo único que respalda sus
+>   parámetros es la forma del fichero que produjeron: `novel_vs_sprot.tsv` tiene siete
+>   columnas y 29 filas para 10 consultas, lo que exige `--max-target-seqs 5` y ese
+>   `outfmt`. Los parámetros que documentaba `REPRODUCIBILITY.md` §8.2 desde la ronda 7
+>   —`--max-target-seqs 1 --max-hsps 1` y doce columnas— habrían dado diez filas y doce
+>   columnas. Estaban mal, y la ronda 8 los copió al script. Corregidos en la ronda 9.
 
 ## Rutas
 
 Los scripts de análisis esperan encontrar en el directorio de trabajo:
 
 - `llama_liftoff.{faa.gz,gff3.gz}`, `llama_miniprot.*`, `llama_lifton.*`
-  (del depósito de datos, versión 1.1.0, DOI 10.5281/zenodo.22072343; DOI de concepto
-  10.5281/zenodo.21445839. La 1.0.0, DOI 10.5281/zenodo.21445840, ya no es la vigente)
+  (del depósito de datos, versión 1.2.0, DOI 10.5281/zenodo.22147977; DOI de concepto
+  10.5281/zenodo.21445839, que resuelve siempre a la última)
 - `Lgla_hx036_helixer.faa` y `Lgla_hx036_helixer_FINAL.gff`
   (web tool de Helixer v0.3.6, con overlap)
 

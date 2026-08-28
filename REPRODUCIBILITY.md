@@ -36,7 +36,9 @@ suspect.
 | Model accuracy against external references (DIAMOND) | **No** | Manual, section 7 |
 | Positional novelty of the *ab initio* branch | **No** | Manual, section 8 |
 | Swiss-Prot search of the orphan loci | **No** | `scripts/run_swissprot.sh`, section 8.2 |
-| Combined reference proteome | **No** | `scripts/build_combined_proteome.sh`, section 8.4 |
+| Combined candidate reference proteome | **No** | `scripts/build_combined_proteome.sh`, section 8.4 |
+| Confidence layers of the combined proteome | **No** | `scripts/capas.py`, section 8.5 |
+| Sensitivity checks (threshold, deduplication, scaffolds) | **No** | `scripts/s7.py`, section 8.6 |
 | Manuscript figures and tables | **No** | Manual, section 9 |
 
 `scripts/build_report.py` discovers the methods by scanning `results/busco/`, so
@@ -770,31 +772,39 @@ establish whether they have a homologue anywhere. The release used contained
 ```bash
 # database
 wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
-gunzip -c uniprot_sprot.fasta.gz | grep -c '^>'     # 575,503
+zcat uniprot_sprot.fasta.gz | grep -c '^>'     # 575,503
 
-diamond makedb --in uniprot_sprot.fasta.gz -d blastp/swissprot --threads 4
+diamond makedb --in uniprot_sprot.fasta.gz -d blastp/sprot
 
 # search
 diamond blastp \
   -q blastp/helixer_novel_nohit.faa \
-  -d blastp/swissprot \
-  -o blastp/hits_swissprot.tsv \
-  --outfmt 6 qseqid sseqid pident length qstart qend sstart send \
-              evalue bitscore qlen slen \
+  -d blastp/sprot.dmnd \
+  -o blastp/novel_vs_sprot.tsv \
   --very-sensitive \
-  --max-target-seqs 1 \
-  --max-hsps 1 \
+  --max-target-seqs 5 \
   --evalue 1e-5 \
+  --outfmt 6 qseqid sseqid pident length evalue bitscore stitle \
   --threads 4
 ```
 
-**Provenance caveat.** The commands above are now wrapped in
-`scripts/run_swissprot.sh`, but that script was **written after the fact**: it is
-a reconstruction from the working record, not a transcript of an executed script,
-and it has not been re-run against the original inputs. Its parameters mirror
-those of section 7.3, which is what the run used. Anyone reproducing this should
-treat the Swiss-Prot search, together with the combined-proteome construction of
-section 8.4, as the two least well-documented steps of the pipeline.
+Wrapped in `scripts/run_swissprot.sh`.
+
+> **These are not the parameters this section carried until round 9, and the
+> earlier ones were wrong.** It documented `--max-target-seqs 1 --max-hsps 1` and
+> a twelve-column output format, borrowed from section 7.3. That is incompatible
+> with the file the run actually produced: `novel_vs_sprot.tsv` has **seven
+> columns** and **29 rows for 10 distinct queries**. One target per query would
+> give exactly ten rows, and the twelve-column format would give twelve columns.
+> The parameters above are the ones consistent with the output. The error entered
+> in round 7 and was propagated to the script in round 8.
+
+**Provenance caveat.** `scripts/run_swissprot.sh` was **written after the fact**,
+on 26 August 2026, reconstructing the commands from the working record. It is not
+a transcript of a script executed at the time and it has not been re-run against
+the original inputs. Unlike the combined-proteome build of section 8.4, which is
+now verified against its output, this step has no such check: the only evidence
+that these parameters are the right ones is the shape of the file they produced.
 
 ### 8.3. Result
 
@@ -821,67 +831,49 @@ the denominator.
 
 ---
 
-### 8.4. Construction of the combined reference proteome
+### 8.4. Construction of the combined candidate reference proteome
 
-The combined reference proteome is the product of this work: the LiftOn core
-extended with the Helixer loci that homology transfer failed to place. It is
+The combined candidate reference proteome is the product of this work: the LiftOn
+core extended with the Helixer loci that homology transfer failed to place. It is
 deposited as `llama_combined_reference_proteome.faa.gz` in the data record,
-version 1.1.0 (DOI 10.5281/zenodo.22072343).
+version 1.2.0 (DOI 10.5281/zenodo.22147977).
 
-| Component | Proteins |
+| Component | Sequences |
 |---|---|
 | LiftOn core | 20,233 |
 | **+** loci from section 8.3 with a camelid orthologue | + 555 |
 | **-** of those, redundant with the core (>= 95 % identity, >= 80 % coverage) | - 80 |
 | **Total** | **20,708** |
 
-Verified by direct counting on the deposited file: 20,233 identifiers of LiftOn
-origin and 475 of Helixer origin, and 555 - 80 = 475.
+The build is wrapped in `scripts/build_combined_proteome.sh`, and **it is
+verified**: run on the original inputs it reproduces the deposited file byte for
+byte.
 
-> **PROVENANCE — read before reusing.** Unlike every other section of this
-> document, the commands below were **not** transcribed from an executed script.
-> They are a reconstruction, written after the fact, of how the deposited file was
-> built, and they have **not been re-executed against the original inputs**.
-> `scripts/build_combined_proteome.sh` wraps them and carries the same warning in
-> its header. The deposited FASTA is the authoritative artefact; this section is
-> the best available account of its construction. Anyone who needs a
-> bit-for-bit-reproducible build should regard this, together with the Swiss-Prot
-> search of section 8.2, as an open gap in the pipeline.
-
-```bash
-# 1. the 555 rescued loci: those of helixer_novel_loci.tsv with a camelid hit
-awk -F'\t' 'NR>1 && ($7=="si" || $8=="si") {print $1}' \
-    blastp/helixer_novel_loci.tsv > blastp/rescued_ids.txt
-wc -l < blastp/rescued_ids.txt                 # 555
-
-# 2. their sequences, out of the Helixer proteome
-seqkit grep -f blastp/rescued_ids.txt Lgla_hx036_helixer.faa \
-    > blastp/rescued.faa
-
-# 3. redundancy against the LiftOn core
-diamond makedb --in results/proteomes/llama_lifton_v2.faa \
-               -d blastp/lifton_core --threads 4
-diamond blastp \
-  -q blastp/rescued.faa \
-  -d blastp/lifton_core \
-  -o blastp/rescued_vs_core.tsv \
-  --outfmt 6 qseqid sseqid pident length qstart qend sstart send \
-              evalue bitscore qlen slen \
-  --very-sensitive --max-target-seqs 1 --max-hsps 1 --evalue 1e-5 --threads 4
-
-# 4. drop the redundant ones: >= 95 % identity AND >= 80 % query coverage
-awk -F'\t' '$3 >= 95 && (100*($6-$5+1)/$11) >= 80 {print $1}' \
-    blastp/rescued_vs_core.tsv | sort -u > blastp/redundant_ids.txt
-wc -l < blastp/redundant_ids.txt               # 80
-
-# 5. the combined proteome
-grep -v -F -f blastp/redundant_ids.txt blastp/rescued_ids.txt \
-    > blastp/added_ids.txt                     # 475
-seqkit grep -f blastp/added_ids.txt Lgla_hx036_helixer.faa > blastp/added.faa
-cat results/proteomes/llama_lifton_v2.faa blastp/added.faa \
-    > Lgla_combined_reference_proteome_v1.faa
-grep -c '^>' Lgla_combined_reference_proteome_v1.faa    # 20708
 ```
+MD5    dc69fa820facc0f087696bdd4885e1c1
+size   11,337,876 bytes
+count  20,708 sequences
+```
+
+The script's final check exits non-zero if the count is not 20,708. Read its
+header before reusing it: it was written on 26 August 2026, after the fact, from
+the record of the original run of 14 August. It is a reconstruction whose *output*
+has been verified, which is a weaker claim than being a transcript of what was
+executed, and a much stronger one than the unverified reconstruction this section
+carried in round 8.
+
+**One step of the build is not obvious and must not be simplified away.** DIAMOND
+aborts on the `.` character that gffread emits for an in-frame stop, so the
+database is built on a *sanitised* copy of the LiftOn core with `.` replaced by
+`X`, while the output proteome is assembled from the **original** file, with the
+stop marks intact. Sanitising the output instead would silently erase the evidence
+of broken reading frames that section 8.5 then classifies.
+
+**The 80 excluded models are not 80 duplications.** `S4_modelos_excluidos.tsv`
+lists them: **76 match one core model each**, and the remaining four fall into
+**two pairs**, each pair matching the same core model from contiguous positions on
+the same scaffold. Those two are fragmentation of a single locus into two Helixer
+models, not redundancy of two independent genes.
 
 **Why LiftOn is the core.** Not because it is the most complete, but because it
 is the best-modelled homology branch: against the external reference it has the
@@ -890,9 +882,95 @@ highest fraction of proteins covering at least 80 % of the query (92.6 %, agains
 three homology branches (2.7 %, against 12.0 % and 8.8 %,
 `scripts/internal_stops.py`).
 
-**Recommended use.** The combined proteome for general purposes; the LiftOn
-proteome alone only when a set strictly derived from the *Vicugna pacos*
+**Recommended use.** The combined candidate proteome for general purposes; the
+LiftOn proteome alone only when a set strictly derived from the *Vicugna pacos*
 reference annotation is required.
+
+### 8.5. Confidence layers
+
+`scripts/capas.py` writes `Lgla_combined_proteome_confidence.tsv`, one row per
+sequence of the combined proteome, and assigns each to one of three layers.
+
+```bash
+python3 scripts/capas.py
+# -> tablas/Lgla_combined_proteome_confidence.tsv
+#    protein_id  source  internal_stop  external_hit  confidence_layer
+```
+
+| Layer | Criterion | Sequences | % |
+|---|---|---|---|
+| `high_confidence` | LiftOn, no internal stop **and** a hit against *C. dromedarius* | 18,920 | 91.4 |
+| `extended_reference` | the rest of the LiftOn core | 1,313 | 6.3 |
+| `extended_candidate` | the Helixer loci added here | 475 | 2.3 |
+| | **Total** | **20,708** | 100 |
+
+Two properties of the file, checked by counting on it: no `high_confidence` row
+carries an internal stop, and none lacks an external hit. The criterion is applied
+without exception.
+
+**`external_hit` is `NA` for the candidate layer, not `yes`.** Those loci entered
+precisely because they had an orthologue in another camelid, but that was
+established on the novel-loci table rather than on the same alignment used for the
+core, so the column is not comparable across layers.
+
+The external reference is *C. dromedarius* and not *V. pacos* for the reason given
+in section 7.4: three of the four branches are projections of the alpaca
+annotation, so measuring against it is circular.
+
+### 8.6. Sensitivity of three choices
+
+Three parameters were chosen rather than derived. Each was re-run across a range
+to establish whether the reported result depends on the value picked.
+
+**Over-extension threshold** (`scripts/s7.py` -> `S7_sensibilidad_umbral.tsv`).
+`analyze_blastp.py` counts a model as apparently over-extended when subject
+coverage exceeds query coverage by more than 20 points. At 10, 15, 20 and 30:
+
+| Threshold | Helixer vs alpaca | LiftOn vs alpaca | ratio | spread vs dromedary |
+|---|---|---|---|---|
+| 10 pp | 4.07 % | 0.15 % | **27x** | 3.93-4.56 % |
+| 15 pp | 2.78 % | 0.08 % | **35x** | 2.46-3.01 % |
+| 20 pp | 2.02 % | 0.04 % | **51x** | 1.67-2.15 % |
+| 30 pp | 0.98 % | 0.02 % | **49x** | 0.74-1.11 % |
+
+Against the circular reference the contrast stays between 27 and 51 times at every
+threshold; against the external one the four branches stay within 1.4 times of
+each other at every threshold. **The circularity finding does not depend on the
+threshold.** The 20 pp used in the manuscript is a point on a plateau, not a
+fortunate choice.
+
+**Deduplication identity** (`S5_sensibilidad_deduplicacion.tsv`). Redundancy of
+the 555 rescued loci against the core, at 80 % coverage and four identity cut-offs:
+
+| Identity | Redundant | Combined total |
+|---|---|---|
+| 100 % | 42 | 20,746 |
+| 99 % | 51 | 20,737 |
+| **95 %** | **80** | **20,708** |
+| 90 % | 112 | 20,676 |
+
+The whole range spans 70 sequences, 0.34 % of the total. The choice of cut-off
+does not change the resource in any way a user would notice.
+
+**Models on scaffolds below the Helixer substrate**
+(`S9_modelos_scaffolds_menores.tsv`). Helixer ran on scaffolds of at least 25 kb;
+the homology branches ran on the whole assembly. How much of each homology
+annotation sits on scaffolds Helixer never saw:
+
+| Branch | mRNA | on scaffolds < 25 kb | % |
+|---|---|---|---|
+| liftoff | 20,306 | 2,187 | 10.8 |
+| miniprot | 21,260 | 2,340 | 11.0 |
+| lifton | 20,464 | 2,209 | 10.8 |
+
+About 11 % in all three, and near-identical between them, so the substrate
+asymmetry does not favour one homology branch over another. It does bound any
+completeness comparison against Helixer.
+
+Two further supplementary tables come from the same round:
+`S6_correspondencia_referencia.tsv` (`scripts/s6.py`), which quantifies the
+isoform-depth asymmetry of section "Reference asymmetry", and
+`S4_modelos_excluidos.tsv`, the 80 excluded models discussed in 8.4.
 
 ---
 
@@ -936,6 +1014,50 @@ pinned to an old version.
 
 `tabla1_final.py` consumes the output of `build_report.py` and locates sections
 by exact heading text. Changing a heading in `build_report.py` breaks it.
+
+### 9.4. Canvas size: 170 mm, and `bbox_inches` in three of the four
+
+The journal requires a minimum type size of 7 pt at the printed width of a
+double-column figure, 170 mm. Two rules follow, and the second is the one that is
+easy to undo by accident.
+
+```python
+fig = plt.figure(figsize=(6.69, alto))    # 6.69 in = 170 mm
+fig.savefig(f, dpi=300)                   # NO bbox_inches
+```
+
+**Figures 1, 2 and 4 follow that rule. Figure 3 does not, deliberately.**
+`fig3_estructura.py` keeps `bbox_inches="tight"` because with its `figsize` of
+(6.8, 3.4) the crop lands at 169.8 mm, which already complies. Its docstring says
+so. The consequence is that **its width depends on what it draws**: if the panels
+change, the PDF has to be measured again. The other three do not have that
+coupling, which is the whole point of fixing the canvas.
+
+| Script | `figsize` | `bbox_inches` | Width |
+|---|---|---|---|
+| `fig1_busco.py` | (6.69, 3.16) | none | 170.0 mm |
+| `fig2_upset.py` | (6.69, 5.22) | none | 170.0 mm |
+| `fig3_estructura.py` | (6.8, 3.4) | `"tight"` | 169.8 mm, **measured, not fixed** |
+| `fig4_cobertura.py` | (6.69, 3.30) | none | 170.0 mm |
+
+**`bbox_inches="tight"` couples the output size to the extent of the text**, so
+enlarging the fonts enlarges the cropped canvas too and the final scale barely
+improves. Measured on figure 4 while preparing the submission:
+
+| Attempt | Result |
+|---|---|
+| fonts x1.29, `figsize` unchanged | 251.2 mm wide -> scaled to 0.677 -> **6.55 pt**, still failing |
+| fonts x1.40 | 264.4 mm -> 0.643 -> **6.75 pt**, still failing |
+| `figsize` (6.71 x 3.04), `bbox_inches` kept | 196.6 mm -> 0.865 -> **6.49 pt**, still failing |
+| `figsize` (4.6 x 2.09) | 178.5 mm -> **7.14 pt**, but the figure is almost all text |
+| **`figsize` width 6.693, no `bbox_inches`** | **170.0 mm -> scale 1.000**, every font at its nominal size |
+
+Fixing the canvas and not cropping is the only one of the five that converges, and
+it does so **without touching a single font size**. If a future edit reintroduces
+`bbox_inches="tight"`, the figures will silently stop complying: the numbers will
+be right and the type will be too small.
+
+Do not chase the problem by scaling fonts. Set the canvas.
 
 
 ---

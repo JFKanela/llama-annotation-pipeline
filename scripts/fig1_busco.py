@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Figura 1. Completitud BUSCO de los cuatro proteomas, con techo y linea de base.
 
-Datos: MANUSCRITO/03_datos/busco/*.txt (linaje artiodactyla_odb12, n=12594).
+Datos: results/busco_summaries/*.txt (linaje artiodactyla_odb12, n=12594).
 Salida: PDF vectorial para el manuscrito, mas PNG para revisar.
+
+ANCHO FIJO 170 mm (6.69 pulgadas), que es el ancho de pagina completa de la revista.
+NO anadir bbox_inches="tight" al guardar: expande el lienzo y baja el tamano de
+letra por debajo del minimo de 7 pt exigido.
 Paleta Okabe-Ito, segura para daltonismo.
 """
 import re, os
@@ -10,11 +14,15 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-D = os.path.expanduser(
-    "~/Gdrive/Doctorado/llama_annotation_pipeline/MANUSCRITO")
-BUSCO = os.path.join(D, "03_datos", "busco")
-OUT = os.path.join(D, "01_figuras")
+# Rutas relativas al repositorio: este script vive en scripts/
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RESULTS = os.path.join(REPO, "results")
+OUT = os.path.join(RESULTS, "figures")
 os.makedirs(OUT, exist_ok=True)
+
+# Resumenes BUSCO, un fichero por brazo con el nombre de la clave de ORDEN.
+# Se obtienen de results/busco/{brazo}/short_summary.specific.*.txt
+BUSCO = os.path.join(RESULTS, "busco_summaries")
 
 # orden de abajo arriba en la figura
 ORDEN = [
@@ -25,7 +33,7 @@ ORDEN = [
     ("lifton",      "LiftOn"),
     ("alpaca_ref",  "V. pacos reference (ceiling)"),
 ]
-PAT = re.compile(r'C:([\d.]+)%\[S:([\d.]+)%,D:([\d.]+)%\],F:([\d.]+)%,M:([\d.]+)%')
+PAT = re.compile(r"C:([\d.]+)%\[S:([\d.]+)%,D:([\d.]+)%\],F:([\d.]+)%,M:([\d.]+)%")
 COL = {"S": "#0072B2", "D": "#56B4E9", "F": "#E69F00", "M": "#D55E00"}
 
 datos, labels = [], []
@@ -45,22 +53,27 @@ for clave, etiqueta in ORDEN:
     labels.append(etiqueta)
     print(f"{etiqueta:32s} S={S:5.1f} D={Dd:4.1f} F={F:4.1f} M={M:5.1f}")
 
-fig, ax = plt.subplots(figsize=(7.2, 3.4))
+fig, ax = plt.subplots(figsize=(6.69, 3.16))
 y = range(len(datos))
 izq = [0.0] * len(datos)
-for i, (k, nombre) in enumerate([("S", "Complete, single-copy"),
-                                 ("D", "Complete, duplicated"),
+for i, (k, nombre) in enumerate([("S", "Single-copy"),
+                                 ("D", "Duplicated"),
                                  ("F", "Fragmented"),
                                  ("M", "Missing")]):
     v = [d[i] for d in datos]
-    ax.barh(list(y), v, left=izq, color=COL[k], label=nombre,
-            height=0.62, edgecolor="white", linewidth=0.6)
+    # chaku_v1 (indice 0) se atenua: es comparacion contextual, no un brazo evaluable
+    alfas = [0.35 if j == 0 else 1.0 for j in range(len(datos))]
+    for j, (yy, vv, ll) in enumerate(zip(y, v, izq)):
+        ax.barh(yy, vv, left=ll, color=COL[k], alpha=alfas[j],
+                label=nombre if j == 1 else None,
+                height=0.62, edgecolor="white", linewidth=0.6)
     izq = [a + b for a, b in zip(izq, v)]
 
 # porcentaje completo al final de cada barra
 for i, d in enumerate(datos):
     ax.text(101, i, f"{d[4]:.1f}%", va="center", fontsize=8.5)
 
+ax.axhline(0.5, color="#9A9A9A", linewidth=0.8, linestyle=(0, (4, 3)))
 ax.set_yticks(list(y))
 ax.set_yticklabels(labels, fontsize=9)
 ax.set_xlim(0, 108)
@@ -75,5 +88,5 @@ plt.tight_layout()
 
 for ext in ("pdf", "png"):
     f = os.path.join(OUT, f"fig1_busco.{ext}")
-    fig.savefig(f, dpi=300, bbox_inches="tight")
+    fig.savefig(f, dpi=300)
     print("escrito:", f)
