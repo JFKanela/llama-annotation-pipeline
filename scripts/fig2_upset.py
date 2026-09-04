@@ -16,6 +16,11 @@ from collections import defaultdict
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+# Fuentes embebidas como TrueType (Type 42), no Type 3: texto seleccionable y
+# sin problemas en los flujos de produccion editoriales.
+matplotlib.rcParams["pdf.fonttype"] = 42
+matplotlib.rcParams["ps.fonttype"] = 42
 from matplotlib.gridspec import GridSpec
 
 # Rutas relativas al repositorio: este script vive en scripts/

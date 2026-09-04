@@ -26,6 +26,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# Fuentes embebidas como TrueType (Type 42), no Type 3: texto seleccionable y
+# sin problemas en los flujos de produccion editoriales.
+matplotlib.rcParams["pdf.fonttype"] = 42
+matplotlib.rcParams["ps.fonttype"] = 42
+
 # Rutas relativas al repositorio: este script vive en scripts/
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RESULTS = os.path.join(REPO, "results")
