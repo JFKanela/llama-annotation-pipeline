@@ -10,7 +10,9 @@ Panel B: EL PANEL IMPORTANTE. Indicio de sobre-extension medido contra las dos
          contra dromedario los cuatro quedan en un margen estrecho, entre 1,67 y
          2,15 %. La causa es la circularidad: los tres brazos de homologia son
          proyecciones de la anotacion de alpaca y alinean contra su propia fuente.
-         Usar alpaca como unico patron habria invertido la conclusion.
+         Usar alpaca como unico patron habria llevado a una conclusion que es un
+         artefacto del patron de medida elegido (el orden de los brazos no se
+         invierte; cambia la magnitud, de ~57x a 1,3x).
          El contraste se mantiene a umbrales de 10, 15, 20 y 30 puntos.
 
 NO se reportan las medianas de cobertura: dan 100 % en los cuatro brazos y en
@@ -24,6 +26,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+
+# Fuentes embebidas como TrueType (Type 42), no Type 3: texto seleccionable y
+# sin problemas en los flujos de produccion editoriales.
+matplotlib.rcParams["pdf.fonttype"] = 42
+matplotlib.rcParams["ps.fonttype"] = 42
 
 # Rutas relativas al repositorio: este script vive en scripts/
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -89,12 +96,13 @@ q80 = [100 * e[a]["q80"] / e[a]["n"] for a in ARMS]
 ax.bar(x - w/2, s80, w, label="Subject coverage", color="#0072B2")
 ax.bar(x + w/2, q80, w, label="Query coverage", color="#56B4E9")
 for i in range(len(ARMS)):
-    ax.text(x[i] - w/2, s80[i] + 0.6, f"{s80[i]:.1f}", ha="center", fontsize=7.5)
-    ax.text(x[i] + w/2, q80[i] + 0.6, f"{q80[i]:.1f}", ha="center", fontsize=7.5)
-ax.set_ylim(78, 96)
-ax.set_ylabel("Proteins $\\geq$ 80 % coverage (% of total)", fontsize=9)
+    ax.text(x[i] - w/2 - 0.06, s80[i] + 1.5, f"{s80[i]:.1f}", ha="center", fontsize=7.5)
+    ax.text(x[i] + w/2, q80[i] + 1.5, f"{q80[i]:.1f}", ha="center", fontsize=7.5)
+ax.set_ylim(0, 100)
+# El denominador son las secuencias con hit (e["n"]), no el total del brazo (6.7).
+ax.set_ylabel("Proteins $\\geq$80% coverage\n(% of proteins with a hit)", fontsize=9)
 ax.set_title("A   coverage vs. $\\it{C.\\ dromedarius}$",
-             loc="left", fontsize=10, fontweight="bold")
+             loc="left", fontsize=9.5, fontweight="bold")
 ax.legend(fontsize=8, frameon=False, loc="upper center",
           bbox_to_anchor=(0.5, -0.30), ncol=2)
 
@@ -110,7 +118,7 @@ for i in range(len(ARMS)):
 ax.set_ylim(0, max(max(dro), max(alp)) * 1.35)
 ax.set_ylabel("Apparent over-extension (%)", fontsize=9)
 ax.set_title("B   circular vs. external reference",
-             loc="left", fontsize=10, fontweight="bold")
+             loc="left", fontsize=9.5, fontweight="bold")
 ax.legend(fontsize=8, frameon=False, loc="upper left")
 
 for ax in axes:
@@ -120,6 +128,8 @@ for ax in axes:
         ax.spines[sp].set_visible(False)
 
 plt.tight_layout()
+# Margen derecho para que el titulo del panel B no se corte en el borde de la pagina.
+fig.subplots_adjust(right=0.99)
 for ext in ("pdf", "png"):
     f = os.path.join(OUT, f"fig4_cobertura.{ext}")
     fig.savefig(f, dpi=300)

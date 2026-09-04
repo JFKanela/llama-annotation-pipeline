@@ -974,6 +974,126 @@ isoform-depth asymmetry of section "Reference asymmetry", and
 
 ---
 
+### 8.7. Transposable-element protein check (3 September 2026)
+
+The assembly was not repeat-masked before annotation. Helixer cannot use masking
+in any case: its importer upper-cases the sequence before one-hot encoding
+(GeenuFF `parse_fasta`, `seq.upper()`), so a soft-masked genome yields the same
+prediction as an unmasked one. This step checks, after the fact, whether the
+omission let transposable-element (TE) ORFs into the proteomes, and in particular
+into the 790 novel loci of 8.1 and the 225 loci with no homologue anywhere.
+
+**Database.** `RepeatPeps.lib` from RepeatMasker 4.1.7-p1 (18,011 TE proteins,
+16.1 million residues; file dated 13 September 2024, MD5
+`9d055c4370ac3a40dfecc2759e2d78d4`). It is extracted from the RepeatMasker
+tarball because it is not distributed on its own; the script checks the MD5 and
+aborts on a mismatch.
+
+**Criterion.** The one funannotate applies to EVidenceModeler models
+(`funannotate/library.py`, `RepeatBlast` + `RemoveBadModels`): DIAMOND blastp,
+e-value 1e-10, one target, and any alignment below that threshold counts, with no
+coverage requirement. Here `--very-sensitive` (the mode used throughout) replaces
+`--sensitive`, and `qlen`/`slen` are kept so that coverage sensitivity can be
+examined. Queries are sanitised exactly as in 6.1 (internal `.` to `X`, terminal
+`.` removed).
+
+```bash
+conda activate blast        # diamond 2.2.4
+bash scripts/run_repeatpeps.sh         # download, makedb, seven alignments
+python3 scripts/repeatpeps_summary.py  # tables and additional file 9
+```
+
+Seven query sets: the four proteomes, the combined candidate proteome and the two
+RefSeq reference proteomes (*C. dromedarius*, 50,982; *V. pacos*, 56,758), the
+latter two as calibration. Each alignment takes about 30 s (90 s for the
+references) on 8 threads.
+
+**Result.**
+
+| Set | n | hits (e ≤ 1e-10) | % | qcov ≥ 50 % |
+|---|---|---|---|---|
+| Helixer | 18,765 | 248 | 1.32 | 88 |
+| Liftoff | 20,073 | 250 | 1.25 | 96 |
+| miniprot | 21,260 | 280 | 1.32 | 107 |
+| LiftOn | 20,233 | 270 | 1.33 | 109 |
+| Combined candidate proteome | 20,708 | 281 | 1.36 | 118 |
+| *V. pacos* RefSeq | 56,758 | 775 | 1.37 | 278 |
+| *C. dromedarius* RefSeq | 50,982 | 651 | 1.28 | 186 |
+
+The fraction is the same in every set, references included, and so is the family
+distribution (hAT-Ac, PiggyBac and Gypsy dominate everywhere). It is a property of
+mammalian proteomes — TE-derived genes that RefSeq itself annotates — not of the
+method or of the masking. Of the 790 novel loci, **12** (1.5 %) hit RepeatPeps: 9
+of the 508 with an orthologue in both references, 1 of 37, 1 of 10, 1 of the 10
+with a Swiss-Prot hit, and **0 of the 225 with no homologue anywhere** (one
+marginal hit at e ≤ 1e-5, a 35-residue alignment). TE ORFs therefore do not
+explain the 225. Eleven of the 12 carry a camelid orthologue and are in the
+combined proteome (`extended_candidate` layer); they are reported, not removed,
+consistent with the no-filter policy of 8.4. The 281 hits in the combined
+proteome are 270 from the LiftOn core and 11 from the 475 Helixer loci.
+
+Outputs: `repeatpeps/hits_<set>.tsv` (12 columns), `repeatpeps_por_conjunto.tsv`,
+`repeatpeps_novel_loci.tsv` (the 790 loci with category and best hit) and
+`additional_file_9.csv` (best hit per sequence with a hit, all seven sets, 2,755
+rows). Re-running the two scripts on the deposited inputs reproduces the seven
+hit tables byte for byte (MD5 checked on 3 September 2026).
+
+### 8.8. BUSCO with the substrate equalised (4 September 2026)
+
+Helixer was run through its web interface on the sequences of 25 kb or more, while
+the three homology branches used the whole assembly, so their BUSCO figures are not
+measured on the same substrate. This step removes the asymmetry and quantifies it.
+
+**Substrate.** Taken from the `##sequence-region` lines of the Helixer GFF3, not
+hard-coded: 244 scaffolds, the shortest of exactly 25,000 bp, 1,872,756,951 bp in
+total. Every model of every branch is assigned to a scaffold from the `mRNA`
+features of its own GFF3.
+
+**Method.** The BUSCO full tables of `qc.tar.gz` are reclassified keeping only the
+matches that fall on those scaffolds, with BUSCO's own rule: two or more complete
+matches make the group duplicated, one makes it complete and single-copy, none
+complete with at least one fragmented makes it fragmented, and nothing makes it
+missing. BUSCO is **not** re-run, and does not need to be: in `protein` mode the
+HMMER score and the length criterion are per sequence, so removing proteins does
+not change the classification of the ones that remain.
+
+```bash
+python3 scripts/busco_substrate_restricted.py \
+    --busco-dir qc --gff3-dir . \
+    --substrate llama_helixer.gff3.gz \
+    --check --out additional_file_1.csv
+```
+
+**Validity control.** With `--check` the script also prints the unrestricted
+recomputation, which must equal the deposited short summaries. It does, to the
+integer: Liftoff C 90.2 % [S 89.9, D 0.3], F 2.4, M 7.4; LiftOn 92.1 [91.1, 1.1],
+3.1, 4.7; miniprot 92.1 [90.9, 1.2], 2.8, 5.0. The model counts outside the
+substrate also reproduce the previous `additional_file_1.csv`: 2,187 for Liftoff
+(10.77 %), 2,209 for LiftOn (10.79 %) and 2,340 for miniprot (11.01 %).
+
+**Result.** Restricted to the substrate, Liftoff falls from 90.2 % to 89.6 %,
+LiftOn from 92.1 % to 91.5 % and miniprot from 92.1 % to 91.4 %. The asymmetry is
+therefore worth 0.6 to 0.7 percentage points out of a raw difference of 4.7 to 6.6
+against Helixer's 85.5 %, about a tenth of it: **the substrate does not explain the
+gap**, which remains 4.1 to 6.0 points once equalised. The manuscript said the
+opposite before this check, in a sentence that was a conjecture; it now reports the
+measurement (3.3 of the manuscript, and its Additional file 1).
+
+The reason the excluded 11 % of models is worth so little is in 6.1 of the
+manuscript: the 1,072,108 excluded scaffolds average 447 bp and cannot hold a
+complete multi-exon model, so what sits on them is mostly fragments redundant with
+copies on the large scaffolds.
+
+**Known limit.** The full table records only the matches BUSCO reported: for a
+group classified as complete, additional fragmented candidates are not listed. When
+the complete match is removed by the restriction, the script counts the group as
+missing where a re-run might report it as fragmented. Upper bound of the effect:
+106, 132 and 159 groups for Liftoff, LiftOn and miniprot. It affects the split
+between fragmented and missing, never the percentage of complete BUSCOs, which is
+exact and is the figure discussed.
+
+---
+
 ## 9. Figures and tables
 
 Run outside the `Snakefile`. Outputs go to `MANUSCRITO/01_figuras/` (PDF and PNG

@@ -86,6 +86,23 @@ lo que después se alineó manualmente contra Swiss-Prot.
 >
 > **Cualquier cifra estructural anterior al 14 de agosto de 2026 hay que recalcularla.**
 
+| `busco_substrate_restricted.py` | `additional_file_1.csv` | Que la asimetría de sustrato **no** explica la diferencia de completitud: restringidos a los 244 scaffolds de 25 kb o más que analizó Helixer, los brazos de homología pierden 0,6-0,7 puntos (Liftoff 90,2 → 89,6 %, LiftOn 92,1 → 91,5 %, miniprot 92,1 → 91,4 %) y la brecha con el 85,5 % de Helixer sigue siendo de 4,1 a 6,0 |
+
+Reclasifica las tablas completas de BUSCO conservando solo las coincidencias que caen
+en el sustrato del brazo *ab initio*, con la regla de BUSCO. **No reejecuta BUSCO, y no
+hace falta:** en modo `protein` la puntuación de HMMER y el criterio de longitud son por
+secuencia, de modo que retirar proteínas no altera la clasificación de las que quedan.
+Con `--check`, la recomputación sin restricción que imprime reproduce **exactamente** los
+resúmenes depositados; ese es el control de validez. El sustrato no se codifica a mano:
+sale de las líneas `##sequence-region` del GFF3 de Helixer.
+
+> **LÍMITE, DECLARADO TAMBIÉN EN 6.4 DEL MANUSCRITO.** La tabla completa solo recoge las
+> coincidencias que BUSCO comunicó: si un grupo estaba clasificado como completo, sus
+> posibles coincidencias fragmentadas no aparecen. Al retirar la completa, este script
+> cuenta el grupo como ausente donde una reejecución podría decir fragmentado. Afecta al
+> reparto entre F y M, **nunca al porcentaje de completos**, que es la cifra que se
+> discute y que es exacta.
+
 ## 3. Evaluación contra referencias externas
 
 | Script | Papel |
@@ -94,6 +111,8 @@ lo que después se alineó manualmente contra Swiss-Prot.
 | `analyze_blastp.py` | Calcula cobertura de consulta y de sujeto por brazo, y reparte los resultados con `md5_to_ids.tsv` |
 | `estado_blastp.sh` | Monitorización del progreso |
 | `run_swissprot.sh` | Alinea contra Swiss-Prot los loci huérfanos que escribe `novel_loci_blast.py`. Reconstruido a posteriori; **sus parámetros se corrigieron en la ronda 9**, ver aviso |
+| `run_repeatpeps.sh` | Alinea los cuatro proteomas, el combinado y los dos de referencia contra `RepeatPeps.lib` (RepeatMasker 4.1.7-p1) con el criterio de funannotate: e-value 1e-10, un hit, sin cobertura mínima. Descarga y verifica por MD5 la base |
+| `repeatpeps_summary.py` | Fracción con hit por conjunto (~1,3 % en todos, referencias incluidas), los 790 loci noveles con su categoría de la Tabla 6 (12 con hit, 0 de los 225 sin ortólogo) y el `additional_file_9.csv` |
 
 Cuarto criterio de calidad de Kourelis et al. 2019, y el único de todo el trabajo que
 evalúa **exactitud del modelo** en lugar de completitud o consistencia interna.
@@ -109,8 +128,8 @@ evalúa **exactitud del modelo** en lugar de completitud o consistencia interna.
 > puntos. Contra alpaca, Helixer lo cumple en **364 de 18.016** proteínas alineadas
 > (**2,0 %**) frente a **7 de 19.726** de LiftOn (**0,04 %**, que se imprime como 0,0 %
 > a un decimal): **más de cincuenta veces**. Contra dromedario los cuatro brazos quedan
-> entre **1,7 % y 2,2 %** y son indistinguibles. **Usar alpaca como patrón habría
-> producido una conclusión falsa en el manuscrito.**
+> entre **1,7 % y 2,2 %**, dentro de medio punto porcentual. **Usar alpaca como patrón
+> habría producido una conclusión que es un artefacto del patrón de medida elegido.**
 >
 > *(Hasta la ronda 8 aquí ponía «veinte veces». La proporción real es de unas 57. Las
 > dos cifras porcentuales sí eran correctas; el multiplicador no.)*
@@ -332,5 +351,5 @@ durante un tiempo y la resolvió el análisis de la sección 3. Medido contra *V
 Helixer parecería sobre-extender más de cincuenta veces lo que LiftOn, pero es un
 artefacto de la circularidad: los brazos de homología alinean contra su propia fuente.
 Medido contra *C. dromedarius*, que es el patrón externo, los cuatro quedan entre 1,7 %
-y 2,2 % y son indistinguibles. La explicación de la mayor longitud media es la
+y 2,2 %, dentro de medio punto porcentual. La explicación de la mayor longitud media es la
 preselección: Helixer solo emite modelos donde consigue construir un ORF completo.

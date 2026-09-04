@@ -30,10 +30,12 @@ are deposited separately, **openly accessible**, under CC0-1.0:
 **Data, version 1.3.0: [10.5281/zenodo.22150587](https://doi.org/10.5281/zenodo.22150587)**
 
 The deposit contains the four annotations (GFF3), the four derived proteomes and
-the combined candidate reference proteome (FASTA), the confidence-layer
-assignment table of that product, the quality-control output for six protein
-sets, the functional annotation and alignment results, and the six additional
-files of the accompanying manuscript.
+the combined candidate reference proteome (FASTA), two derived files of that
+product (the high-confidence layer on its own and a copy with the internal stop
+characters masked), the `chaku_v1` baseline proteome, the confidence-layer
+assignment table, the quality-control output for six protein sets, the functional
+annotation and alignment results, the transposable-element protein check, and the
+nine additional files of the accompanying manuscript.
 
 Note that code and data are deposited as **separate records with different
 licences**: MIT for this workflow, CC0-1.0 for the data. This is deliberate.
@@ -259,6 +261,11 @@ be derived in one command.
 - **gffcompare** concordance between the Liftoff and miniprot branches.
 - **InterProScan** functional coverage.
 - **DIAMOND** coverage against the external and the circular reference.
+- **DIAMOND** against RepeatMasker's `RepeatPeps.lib`: transposable-element protein
+  check of every proteome and of the novel loci (the assembly was not masked).
+- **BUSCO with the substrate equalised**: the homology arms recomputed on the
+  scaffolds the ab initio arm analysed, so that the two are comparable
+  (`scripts/busco_substrate_restricted.py`).
 - A comparative report (`results/report/comparison_report.md` +
   `comparison_table.tsv`).
 
@@ -289,6 +296,9 @@ be derived in one command.
 │   ├── estado_blastp.sh             # DIAMOND progress monitor
 │   ├── analyze_blastp.py            # coverage and identity statistics
 │   ├── run_swissprot.sh             # Swiss-Prot search for loci without camelid orthologue
+│   ├── run_repeatpeps.sh            # TE-protein check against RepeatPeps.lib (seven sets)
+│   ├── repeatpeps_summary.py        # summary of the TE-protein check; additional file 9
+│   ├── busco_substrate_restricted.py # BUSCO with the substrate equalised; additional file 1
 │   ├── overlap_md5.py               # exact-sequence overlap between the four proteomes
 │   ├── overlap_coords.py            # positional novelty against the homology branches
 │   ├── novel_loci_blast.py          # characterisation of the novel loci
@@ -328,7 +338,7 @@ below the 7 pt minimum required by the target journal.
 - Network access for the data-acquisition rules (NCBI `datasets`)
 - InterProScan requires OpenJDK 11; system version 17 is not compatible
 
-Versions of every tool used are listed in `additional_file_6.tsv` within the data
+Versions of every tool used are listed in `additional_file_6.csv` within the data
 deposit.
 
 ## Usage
@@ -337,12 +347,19 @@ deposit.
 # from the workflow/ directory
 cd workflow
 
-# dry run (plan only)
+# dry run: resolves the DAG and reports every rule that would run,
+# without downloading anything or executing a single tool
 snakemake -n
 
 # full run with conda environments
 snakemake --use-conda --cores 8
 ```
+
+The dry run is the check to make before committing to a full run: it fails fast on
+a malformed `config.yaml`, a missing input or a broken rule graph. It does not
+validate the tools themselves, and it does not cover the manual stages listed in
+[Automation boundary](#automation-boundary-important), which are run from
+`scripts/`.
 
 Input genomes are downloaded automatically from NCBI using the accessions in
 `config.yaml`; edit that file to point the workflow at different assemblies,
