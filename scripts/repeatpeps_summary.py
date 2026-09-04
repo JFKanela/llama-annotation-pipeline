@@ -9,7 +9,7 @@ Lee las salidas de run_repeatpeps.sh y produce:
   repeatpeps/repeatpeps_novel_loci.tsv
       los 790 loci posicionalmente noveles de Helixer (helixer_novel_loci.tsv)
       con su categoria de la Tabla 6 y su mejor hit contra RepeatPeps, si lo hay.
-  repeatpeps/additional_file_9.csv
+  repeatpeps/additional_file_5.csv
       mejor hit de cada secuencia con hit, en los siete conjuntos, con familia,
       identidad, e-value, bitscore y ambas coberturas.
 
@@ -96,12 +96,12 @@ for k in ["orthologue in both references", "orthologue in C. dromedarius only", 
     print(f"  {k:40s} n={tot[k]:4d}  repeat hit={hit[k]:3d}")
 print(f"  {'TOTAL':40s} n={sum(tot.values()):4d}  repeat hit={sum(hit.values()):3d}")
 
-# ------------------------------------------------------------------ additional file 9
-with open(os.path.join(WORK, "additional_file_9.csv"), "w", newline="") as out:
+# ------------------------------------------------------------------ additional file 5
+with open(os.path.join(WORK, "additional_file_5.csv"), "w", newline="") as out:
     w = csv.writer(out)
     w.writerow(["set", "query_id", "subject_id", "repeat_family", "pident", "aln_length", "evalue", "bitscore", "query_cov_pct", "subject_cov_pct"])
     for s, label in SETS.items():
         for q, v in sorted(hits[s].items()):
             w.writerow([label, q, v["subject"], v["family"], f"{v['pident']:.1f}", v["length"], f"{v['evalue']:.2e}",
                         f"{v['bitscore']:.1f}", f"{v['qcov']:.1f}", f"{v['scov']:.1f}"])
-print("\nescrito:", os.path.join(WORK, "additional_file_9.csv"))
+print("\nescrito:", os.path.join(WORK, "additional_file_5.csv"))

@@ -974,6 +974,12 @@ isoform-depth asymmetry of section "Reference asymmetry", and
 
 ---
 
+> **NUMBERING OF THE ADDITIONAL FILES (4 September 2026).** They were renumbered to
+> follow the order of first citation in the manuscript, which is what the journal
+> requires. Old to new: 1 stays 1, 7 to 2, 8 to 3, 6 to 4, 9 to 5, 2 to 6, 3 to 7,
+> 4 to 8, 5 to 9. This document and the scripts use the new numbers throughout;
+> entries dated before that day in the Zenodo *Changes* log keep the old ones.
+
 ### 8.7. Transposable-element protein check (3 September 2026)
 
 The assembly was not repeat-masked before annotation. Helixer cannot use masking
@@ -1000,7 +1006,7 @@ examined. Queries are sanitised exactly as in 6.1 (internal `.` to `X`, terminal
 ```bash
 conda activate blast        # diamond 2.2.4
 bash scripts/run_repeatpeps.sh         # download, makedb, seven alignments
-python3 scripts/repeatpeps_summary.py  # tables and additional file 9
+python3 scripts/repeatpeps_summary.py  # tables and additional file 5
 ```
 
 Seven query sets: the four proteomes, the combined candidate proteome and the two
@@ -1034,7 +1040,7 @@ proteome are 270 from the LiftOn core and 11 from the 475 Helixer loci.
 
 Outputs: `repeatpeps/hits_<set>.tsv` (12 columns), `repeatpeps_por_conjunto.tsv`,
 `repeatpeps_novel_loci.tsv` (the 790 loci with category and best hit) and
-`additional_file_9.csv` (best hit per sequence with a hit, all seven sets, 2,755
+`additional_file_5.csv` (best hit per sequence with a hit, all seven sets, 2,755
 rows). Re-running the two scripts on the deposited inputs reproduces the seven
 hit tables byte for byte (MD5 checked on 3 September 2026).
 

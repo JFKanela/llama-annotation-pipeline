@@ -112,7 +112,7 @@ sale de las líneas `##sequence-region` del GFF3 de Helixer.
 | `estado_blastp.sh` | Monitorización del progreso |
 | `run_swissprot.sh` | Alinea contra Swiss-Prot los loci huérfanos que escribe `novel_loci_blast.py`. Reconstruido a posteriori; **sus parámetros se corrigieron en la ronda 9**, ver aviso |
 | `run_repeatpeps.sh` | Alinea los cuatro proteomas, el combinado y los dos de referencia contra `RepeatPeps.lib` (RepeatMasker 4.1.7-p1) con el criterio de funannotate: e-value 1e-10, un hit, sin cobertura mínima. Descarga y verifica por MD5 la base |
-| `repeatpeps_summary.py` | Fracción con hit por conjunto (~1,3 % en todos, referencias incluidas), los 790 loci noveles con su categoría de la Tabla 6 (12 con hit, 0 de los 225 sin ortólogo) y el `additional_file_9.csv` |
+| `repeatpeps_summary.py` | Fracción con hit por conjunto (~1,3 % en todos, referencias incluidas), los 790 loci noveles con su categoría de la Tabla 6 (12 con hit, 0 de los 225 sin ortólogo) y el `additional_file_5.csv` |
 
 Cuarto criterio de calidad de Kourelis et al. 2019, y el único de todo el trabajo que
 evalúa **exactitud del modelo** en lugar de completitud o consistencia interna.
