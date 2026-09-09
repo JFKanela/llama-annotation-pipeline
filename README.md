@@ -297,8 +297,8 @@ be derived in one command.
 │   ├── analyze_blastp.py            # coverage and identity statistics
 │   ├── run_swissprot.sh             # Swiss-Prot search for loci without camelid orthologue
 │   ├── run_repeatpeps.sh            # TE-protein check against RepeatPeps.lib (seven sets)
-│   ├── repeatpeps_summary.py        # summary of the TE-protein check; additional file 5
-│   ├── busco_substrate_restricted.py # BUSCO with the substrate equalised; additional file 1
+│   ├── repeatpeps_summary.py        # summary of the TE-protein check; additional file 4 (manuscript v37; file still written as additional_file_5.csv)
+│   ├── busco_substrate_restricted.py # BUSCO with the substrate equalised; additional file 6 (manuscript v37; file still written as additional_file_1.csv)
 │   ├── overlap_md5.py               # exact-sequence overlap between the four proteomes
 │   ├── overlap_coords.py            # positional novelty against the homology branches
 │   ├── novel_loci_blast.py          # characterisation of the novel loci
@@ -338,7 +338,7 @@ below the 7 pt minimum required by the target journal.
 - Network access for the data-acquisition rules (NCBI `datasets`)
 - InterProScan requires OpenJDK 11; system version 17 is not compatible
 
-Versions of every tool used are listed in `additional_file_4.csv` within the data
+Versions of every tool used are listed in `additional_file_2.csv` within the data
 deposit.
 
 ## Usage

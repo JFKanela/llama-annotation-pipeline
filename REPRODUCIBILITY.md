@@ -980,6 +980,14 @@ isoform-depth asymmetry of section "Reference asymmetry", and
 > 4 to 8, 5 to 9. This document and the scripts use the new numbers throughout;
 > entries dated before that day in the Zenodo *Changes* log keep the old ones.
 
+> **NUMBERING OF THE ADDITIONAL FILES (7 September 2026).** The manuscript was restructured
+> (Methods before Results and Discussion) and the files were renumbered again to the new order
+> of first citation, as the journal requires: 8 to 1, 4 to 2, 7 to 3, 5 to 4, 9 to 5, 1 to 6,
+> 2 to 7, 3 to 8, 6 to 9. The scripts keep writing their outputs under the September-4 names
+> (`additional_file_1.csv` for the substrate-equalised BUSCO counts, now Additional file 6 of
+> the manuscript; `additional_file_5.csv` for the RepeatPeps hits, now Additional file 4); the
+> Zenodo archive `supplementary.tar.gz` uses the new names since 2026-09-07.
+
 ### 8.7. Transposable-element protein check (3 September 2026)
 
 The assembly was not repeat-masked before annotation. Helixer cannot use masking
@@ -1006,7 +1014,7 @@ examined. Queries are sanitised exactly as in 6.1 (internal `.` to `X`, terminal
 ```bash
 conda activate blast        # diamond 2.2.4
 bash scripts/run_repeatpeps.sh         # download, makedb, seven alignments
-python3 scripts/repeatpeps_summary.py  # tables and additional file 5
+python3 scripts/repeatpeps_summary.py  # tables and additional file 4 (v37 numbering)
 ```
 
 Seven query sets: the four proteomes, the combined candidate proteome and the two
@@ -1040,9 +1048,10 @@ proteome are 270 from the LiftOn core and 11 from the 475 Helixer loci.
 
 Outputs: `repeatpeps/hits_<set>.tsv` (12 columns), `repeatpeps_por_conjunto.tsv`,
 `repeatpeps_novel_loci.tsv` (the 790 loci with category and best hit) and
-`additional_file_5.csv` (best hit per sequence with a hit, all seven sets, 2,755
-rows). Re-running the two scripts on the deposited inputs reproduces the seven
-hit tables byte for byte (MD5 checked on 3 September 2026).
+`additional_file_5.csv` (Additional file 4 of the manuscript since v37; best hit
+per sequence with a hit, all seven sets, 2,755 rows). Re-running the two scripts
+on the deposited inputs reproduces the seven hit tables byte for byte (MD5
+checked on 3 September 2026).
 
 ### 8.8. BUSCO with the substrate equalised (4 September 2026)
 
@@ -1083,7 +1092,7 @@ therefore worth 0.6 to 0.7 percentage points out of a raw difference of 4.7 to 6
 against Helixer's 85.5 %, about a tenth of it: **the substrate does not explain the
 gap**, which remains 4.1 to 6.0 points once equalised. The manuscript said the
 opposite before this check, in a sentence that was a conjecture; it now reports the
-measurement (3.3 of the manuscript, and its Additional file 1).
+measurement (3.3 of the manuscript, and its Additional file 6).
 
 The reason the excluded 11 % of models is worth so little is in 6.1 of the
 manuscript: the 1,072,108 excluded scaffolds average 447 bp and cannot hold a
