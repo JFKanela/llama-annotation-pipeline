@@ -24,8 +24,8 @@ authors:
 repository-code: "https://github.com/JFKanela/llama-annotation-pipeline"
 url: "https://github.com/JFKanela/llama-annotation-pipeline"
 license: MIT
-version: 1.2.0
-date-released: "2026-08-28"
+version: 1.3.0
+date-released: "2026-09-11"
 doi: 10.5281/zenodo.21456816
 identifiers:
   - type: doi
