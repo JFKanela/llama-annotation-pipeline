@@ -18,6 +18,7 @@ downloads and pipeline outputs are produced locally and are excluded via
 | | |
 |---|---|
 | Code, concept DOI | [10.5281/zenodo.21456816](https://doi.org/10.5281/zenodo.21456816) |
+| Code, version 1.3.0 | [10.5281/zenodo.22709021](https://doi.org/10.5281/zenodo.22709021) |
 | Data, concept DOI | [10.5281/zenodo.21445839](https://doi.org/10.5281/zenodo.21445839) |
 | WorkflowHub | [10.48546/workflowhub.workflow.2250.1](https://doi.org/10.48546/workflowhub.workflow.2250.1) |
 | RRID | `SCR_028889` |
